@@ -1,0 +1,756 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BYTEQUEST | Neural Breakpoint</title>
+
+<style>
+:root {
+  --bg: #080b16;
+  --panel: #11182b;
+  --cyan: #39f5ff;
+  --purple: #a78bfa;
+  --text: #eef5ff;
+  --muted: #9ba9c7;
+  --green: #62ffb2;
+  --red: #ff657a;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Courier New", monospace;
+  background:
+    radial-gradient(ellipse at top, #18284b 0%, transparent 60%),
+    var(--bg);
+  color: var(--text);
+}
+button { font-family: inherit; cursor: pointer; }
+.app {
+  max-width: 1000px;
+  margin: auto;
+  padding: 22px;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #26344e;
+  padding-bottom: 18px;
+}
+.logo {
+  font-size: clamp(22px, 5vw, 34px);
+  font-weight: bold;
+  letter-spacing: 3px;
+  color: var(--cyan);
+  text-shadow: 0 0 16px #39f5ff66;
+}
+.logo span { color: var(--purple); }
+.tagline { color: var(--muted); font-size: 11px; margin-top: 5px; }
+.status {
+  color: var(--green);
+  font-size: 11px;
+  text-align: right;
+}
+.status::before { content: "● "; }
+.hero {
+  padding: 30px 0 22px;
+  text-align: center;
+}
+.eyebrow {
+  color: var(--cyan);
+  letter-spacing: 4px;
+  font-size: 11px;
+}
+h1 {
+  font-size: clamp(26px, 6vw, 44px);
+  margin: 14px 0;
+}
+.hero p { color: var(--muted); line-height: 1.7; }
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+.stat, .panel {
+  background: linear-gradient(145deg, #141e34, #0d1323);
+  border: 1px solid #293957;
+  border-radius: 14px;
+  padding: 17px;
+}
+.stat small { color: var(--muted); font-size: 10px; }
+.stat strong {
+  display: block;
+  font-size: 23px;
+  margin-top: 9px;
+  color: var(--cyan);
+}
+.panel { margin-top: 16px; }
+.panel h2 { font-size: 15px; color: var(--purple); }
+.modes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+.mode {
+  padding: 15px;
+  border-radius: 10px;
+  background: #111b30;
+  border: 1px solid #293957;
+}
+.mode b { display: block; color: var(--cyan); margin-bottom: 8px; }
+.mode small { color: var(--muted); line-height: 1.5; }
+.primary {
+  border: 0;
+  background: linear-gradient(100deg, var(--cyan), #8ba8ff);
+  color: #07101d;
+  font-weight: bold;
+  padding: 15px 20px;
+  border-radius: 9px;
+  width: 100%;
+  margin-top: 18px;
+  font-size: 14px;
+  transition: transform .15s;
+}
+.primary:hover { transform: translateY(-2px); }
+.secondary {
+  border: 1px solid #425574;
+  color: var(--text);
+  background: #131d32;
+  border-radius: 8px;
+  padding: 11px 15px;
+}
+.hidden { display: none !important; }
+.hud {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 9px;
+  margin: 22px 0 12px;
+}
+.hud .stat { padding: 12px; }
+.hud strong { font-size: 19px; }
+.progress {
+  height: 5px;
+  background: #26314a;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 15px 0;
+}
+#progressBar {
+  width: 0;
+  height: 100%;
+  background: var(--cyan);
+  transition: width .3s;
+}
+.question-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 11px;
+}
+#question {
+  font-size: clamp(19px, 4vw, 27px);
+  line-height: 1.5;
+  margin: 24px 0;
+}
+#codeBox {
+  display: none;
+  background: #070b14;
+  color: var(--green);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #253957;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  margin-bottom: 18px;
+}
+.answers { display: grid; gap: 10px; }
+.answer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  color: var(--text);
+  background: #151f34;
+  border: 1px solid #2a3b59;
+  padding: 15px;
+  border-radius: 9px;
+  line-height: 1.5;
+}
+.answer .letter {
+  color: var(--cyan);
+  border: 1px solid #34546a;
+  min-width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+}
+.answer:hover:not(:disabled) {
+  border-color: var(--cyan);
+  background: #1a2b43;
+}
+.answer:disabled { cursor: default; opacity: .85; }
+.answer.correct {
+  border-color: var(--green);
+  background: #10352c;
+}
+.answer.wrong {
+  border-color: var(--red);
+  background: #3b1828;
+}
+#feedback {
+  min-height: 56px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin-top: 15px;
+}
+#feedback.good { color: var(--green); }
+#feedback.bad { color: #ff9eab; }
+.actions {
+  display: flex;
+  gap: 10px;
+}
+.actions button { flex: 1; }
+.timer-track {
+  height: 4px;
+  background: #26314a;
+  margin-top: 12px;
+}
+#timerBar {
+  height: 100%;
+  width: 100%;
+  background: var(--green);
+  transition: width 1s linear;
+}
+#resultTitle { color: var(--cyan); }
+#finalScore {
+  font-size: 48px;
+  color: var(--green);
+  margin: 15px 0;
+}
+footer {
+  text-align: center;
+  color: #71809d;
+  font-size: 10px;
+  padding: 30px 0 12px;
+}
+@media(max-width: 540px) {
+  .app { padding: 15px; }
+  .stats { gap: 7px; }
+  .stat { padding: 12px; }
+  .stat strong { font-size: 19px; }
+  .hud { grid-template-columns: repeat(2, 1fr); }
+  .modes { grid-template-columns: 1fr; }
+  header { align-items: flex-start; }
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<header>
+  <div>
+    <div class="logo">BYTE<span>QUEST</span></div>
+    <div class="tagline">NEURAL BREAKPOINT // STUDENT EDITION</div>
+  </div>
+  <div class="status">SYSTEM ONLINE</div>
+</header>
+
+<section id="home">
+  <div class="hero">
+    <div class="eyebrow">THINK. DECODE. INNOVATE.</div>
+    <h1>Your Brain Is The <span style="color:var(--cyan)">Ultimate CPU.</span></h1>
+    <p>
+      Enter a world of logic, coding, cyber defense and engineering.
+      Every round upgrades the challenge. Can you master the system?
+    </p>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <small>YOUR BEST SCORE</small>
+      <strong id="bestScore">0</strong>
+    </div>
+    <div class="stat">
+      <small>CHALLENGE TYPES</small>
+      <strong>04</strong>
+    </div>
+    <div class="stat">
+      <small>TIME / QUESTION</small>
+      <strong>20 SEC</strong>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>// SELECT YOUR MISSION</h2>
+    <div class="modes">
+      <div class="mode">
+        <b>01 / LOGIC CORE</b>
+        <small>Crack patterns, number sequences and logical puzzles.</small>
+      </div>
+      <div class="mode">
+        <b>02 / CODE LAB</b>
+        <small>Understand programming, output and debugging.</small>
+      </div>
+      <div class="mode">
+        <b>03 / CYBER SHIELD</b>
+        <small>Identify security risks and make safe digital decisions.</small>
+      </div>
+      <div class="mode">
+        <b>04 / ENGINEERING</b>
+        <small>Explore circuits, algorithms, data and systems thinking.</small>
+      </div>
+    </div>
+    <button class="primary" onclick="startGame()">INITIALIZE MISSION →</button>
+  </div>
+
+  <div class="panel">
+    <h2>// HOW TO PLAY</h2>
+    <p style="color:var(--muted);line-height:1.8;font-size:13px">
+      Answer before the timer ends. Correct answers earn points.
+      Build combos for bonus points. Every five questions, your mission
+      advances to a harder level. Complete 15 questions to finish the mission.
+    </p>
+  </div>
+</section>
+
+<section id="game" class="hidden">
+  <div class="hud">
+    <div class="stat"><small>SCORE</small><strong id="score">0</strong></div>
+    <div class="stat"><small>LEVEL</small><strong id="level">01</strong></div>
+    <div class="stat"><small>COMBO</small><strong id="combo">×0</strong></div>
+    <div class="stat"><small>TIME</small><strong id="time">20s</strong></div>
+  </div>
+
+  <div class="timer-track"><div id="timerBar"></div></div>
+  <div class="progress"><div id="progressBar"></div></div>
+
+  <div class="panel">
+    <div class="question-meta">
+      <span id="category">LOGIC CORE</span>
+      <span id="questionNumber">QUESTION 01 / 15</span>
+    </div>
+    <h2 id="missionLabel">// SYSTEM CHALLENGE</h2>
+    <div id="question">Loading challenge...</div>
+    <pre id="codeBox"></pre>
+    <div class="answers" id="answers"></div>
+    <div id="feedback" aria-live="polite"></div>
+    <div class="actions">
+      <button class="secondary" onclick="useHint()" id="hintBtn">HINT − 10 PTS</button>
+      <button class="primary" style="margin-top:0" id="nextBtn"
+        onclick="nextQuestion()" disabled>NEXT CHALLENGE →</button>
+    </div>
+  </div>
+</section>
+
+<section id="result" class="hidden">
+  <div class="panel" style="text-align:center;padding:30px 18px">
+    <div class="eyebrow">MISSION REPORT</div>
+    <h1 id="resultTitle">SYSTEM MASTERED</h1>
+    <div id="finalScore">0</div>
+    <p style="color:var(--muted)">TOTAL POINTS</p>
+    <div class="stats">
+      <div class="stat"><small>CORRECT</small><strong id="correctCount">0</strong></div>
+      <div class="stat"><small>ACCURACY</small><strong id="accuracy">0%</strong></div>
+      <div class="stat"><small>BEST COMBO</small><strong id="bestCombo">×0</strong></div>
+    </div>
+    <h2 id="rank">RANK: ROOKIE</h2>
+    <p id="resultMessage" style="color:var(--muted);line-height:1.7"></p>
+    <button class="primary" onclick="startGame()">RESTART MISSION ↻</button>
+    <button class="secondary" style="width:100%;margin-top:10px"
+      onclick="goHome()">RETURN TO BASE</button>
+  </div>
+</section>
+
+<footer>BYTEQUEST v1.0 // BUILT FOR CURIOUS MINDS</footer>
+</div>
+
+<script>
+const bank = [
+[
+{
+cat:"LOGIC CORE", q:"Find the next number: 2, 6, 12, 20, 30, ?",
+o:["36","40","42","44"], a:2,
+why:"The differences are 4, 6, 8, 10 and 12. So 30 + 12 = 42.",
+hint:"Look at the differences between consecutive numbers."
+},
+{
+cat:"CODE LAB", q:"What is the output of this C code?",
+code:'int x = 5;\\nprintf("%d", x + 3);',
+o:["5","8","53","Error"], a:1,
+why:"x + 3 equals 8, which is printed as an integer.",
+hint:"The plus operator adds the two numbers."
+},
+{
+cat:"CYBER SHIELD", q:"You receive an unexpected email asking for your password through a link. What should you do?",
+o:["Click the link quickly","Reply with your password","Verify through the official website","Forward it to everyone"], a:2,
+why:"Unexpected password requests may be phishing. Use the official website or contact the organization directly.",
+hint:"Think about the safest way to verify a request."
+},
+{
+cat:"ENGINEERING", q:"Which component stores data temporarily while a computer is running?",
+o:["RAM","Keyboard","Monitor","Printer"], a:0,
+why:"RAM stores working data temporarily and is generally volatile memory.",
+hint:"It is the computer's main working memory."
+},
+{
+cat:"LOGIC CORE", q:"All Zips are Zaps. All Zaps are Zops. Which statement must be true?",
+o:["All Zops are Zips","All Zips are Zops","No Zips are Zops","All Zops are Zaps"], a:1,
+why:"If every Zip belongs to the group Zaps, and every Zap belongs to Zops, every Zip must be a Zop.",
+hint:"Follow the two groups in order."
+},
+{
+cat:"CODE LAB", q:"In C, which format specifier is used to print an integer?",
+o:["%f","%c","%d","%s"], a:2,
+why:"%d is commonly used to print an int in C.",
+hint:"It is the specifier used for decimal integers."
+},
+{
+cat:"CYBER SHIELD", q:"Which password is generally the strongest?",
+o:["12345678","password","Your first name","A long, unique passphrase"], a:3,
+why:"A long, unique passphrase is difficult to guess. A password manager can help you create and store unique passwords.",
+hint:"Length and uniqueness matter."
+},
+{
+cat:"ENGINEERING", q:"What is the binary representation of decimal 5?",
+o:["101","110","111","100"], a:0,
+why:"5 = 4 + 1, so its binary representation is 101.",
+hint:"Binary place values are 4, 2 and 1."
+}
+],
+[
+{
+cat:"LOGIC CORE", q:"Find the next number: 3, 8, 15, 24, 35, ?",
+o:["42","46","48","50"], a:2,
+why:"The differences are 5, 7, 9, 11 and then 13. Therefore 35 + 13 = 48.",
+hint:"The differences increase by 2 each time."
+},
+{
+cat:"CODE LAB", q:"What is the output of this C code?",
+code:'int x = 4;\\nint y = 3;\\nprintf("%d", x * y - 2);',
+o:["14","10","12","7"], a:1,
+why:"Multiplication happens first: 4 × 3 − 2 = 10.",
+hint:"Multiplication comes before subtraction."
+},
+{
+cat:"CYBER SHIELD", q:"A website address is misspelled by one letter and asks you to log in. What is the best action?",
+o:["Enter your details","Check the official domain and avoid the suspicious link","Ignore the spelling","Use the same password to test it"], a:1,
+why:"Lookalike domains are often used in phishing. Navigate to the verified website yourself.",
+hint:"Check the website's identity before logging in."
+},
+{
+cat:"ENGINEERING", q:"A circuit has a 12 V supply and a 4 Ω resistor. What current flows through it?",
+o:["2 A","3 A","4 A","48 A"], a:1,
+why:"Ohm's law gives I = V/R = 12/4 = 3 amperes.",
+hint:"Use I = V/R."
+},
+{
+cat:"LOGIC CORE", q:"Three machines make three parts in three minutes. At the same rate, how long do six machines take to make six parts?",
+o:["3 minutes","6 minutes","9 minutes","18 minutes"], a:0,
+why:"Each machine makes one part in three minutes. Six machines can make six parts in three minutes.",
+hint:"Consider the work done by each machine independently."
+},
+{
+cat:"CODE LAB", q:"What is the value of x after this C code runs?",
+code:'int x = 10;\\nx += 5;\\nx /= 3;',
+o:["3","5","15","10"], a:1,
+why:"x becomes 15, then integer division gives 15 / 3 = 5.",
+hint:"Evaluate the two assignment operations in order."
+},
+{
+cat:"CYBER SHIELD", q:"What does multi-factor authentication add to an account?",
+o:["A longer username","An additional verification step","Unlimited storage","A faster processor"], a:1,
+why:"MFA requires another verification factor beyond the password.",
+hint:"It checks your identity in more than one way."
+},
+{
+cat:"ENGINEERING", q:"A sensor produces 100 readings per second. How many readings does it produce in 2.5 seconds?",
+o:["25","200","250","400"], a:2,
+why:"100 readings/second × 2.5 seconds = 250 readings.",
+hint:"Multiply the rate by the time."
+}
+],
+[
+{
+cat:"LOGIC CORE", q:"A sequence follows this rule: multiply by 2, then add 1. Starting at 2, what are the next two values?",
+o:["4, 8","5, 11","5, 10","6, 13"], a:1,
+why:"2 × 2 + 1 = 5, then 5 × 2 + 1 = 11.",
+hint:"Apply both operations to each previous value."
+},
+{
+cat:"CODE LAB", q:"What does this C loop print?",
+code:'for (int i = 1; i <= 3; i++)\\n    printf("%d", i);',
+o:["123","0123","111","321"], a:0,
+why:"The loop prints 1, then 2, then 3 with no spaces or newline.",
+hint:"Follow the values of i from 1 through 3."
+},
+{
+cat:"CYBER SHIELD", q:"A public computer still has someone else's account signed in. What should you do?",
+o:["Read their messages","Download their files","Avoid accessing their data and notify the owner or staff","Change their password"], a:2,
+why:"Respect privacy and avoid accessing another person's account or data.",
+hint:"Protect other people's privacy."
+},
+{
+cat:"ENGINEERING", q:"A 10-bit unsigned binary number can represent which range?",
+o:["0 to 10","0 to 100","0 to 1023","1 to 1024"], a:2,
+why:"An n-bit unsigned value ranges from 0 to 2ⁿ − 1. For 10 bits, that is 0 to 1023.",
+hint:"Calculate 2 to the power of the number of bits, then subtract 1."
+},
+{
+cat:"LOGIC CORE", q:"A robot moves 3 metres north, 4 metres east, then 3 metres south. Where is it relative to its start?",
+o:["3 metres north","4 metres east","4 metres west","At its starting point"], a:1,
+why:"The north and south movements cancel, leaving 4 metres east.",
+hint:"Cancel movements in opposite directions."
+},
+{
+cat:"CODE LAB", q:"What is the result of 13 % 5 in C?",
+o:["2","3","2.6","5"], a:0,
+why:"The remainder of 13 divided by 5 is 3? Check: 5 × 2 = 10, and 13 − 10 = 3.",
+hint:"Subtract the largest multiple of 5 that does not exceed 13."
+},
+{
+cat:"CYBER SHIELD", q:"Which action best protects sensitive data when using an online service?",
+o:["Share a one-time password with support","Use a unique password and enable MFA","Disable all security alerts","Reuse your college password everywhere"], a:1,
+why:"Unique passwords limit the impact of a breach, and MFA adds another layer of protection.",
+hint:"Choose both uniqueness and an extra verification factor."
+},
+{
+cat:"ENGINEERING", q:"An algorithm checks every item in a list of n items once. Its time complexity is usually:",
+o:["O(1)","O(log n)","O(n)","O(n²)"], a:2,
+why:"One operation per item produces linear time complexity, O(n).",
+hint:"The work grows in direct proportion to list length."
+}
+]
+];
+
+let score = 0, combo = 0, bestCombo = 0;
+let correct = 0, answered = 0, index = 0;
+let currentQuestions = [], current = null;
+let timeLeft = 20, timer = null;
+let locked = false, hintUsed = false;
+
+const $ = id => document.getElementById(id);
+
+function shuffle(arr) {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function best() {
+  try { return Number(localStorage.getItem("bytequestBest") || 0); }
+  catch(e) { return 0; }
+}
+$("bestScore").textContent = best();
+
+function startGame() {
+  score = 0;
+  combo = 0;
+  bestCombo = 0;
+  correct = 0;
+  answered = 0;
+  index = 0;
+  currentQuestions = [];
+
+  // Shuffle within each difficulty tier. Difficulty rises every 5 questions.
+  bank.forEach(tier => {
+    currentQuestions.push(...shuffle(tier));
+  });
+
+  $("home").classList.add("hidden");
+  $("result").classList.add("hidden");
+  $("game").classList.remove("hidden");
+  renderQuestion();
+}
+
+function renderQuestion() {
+  clearInterval(timer);
+  if (index >= 15) {
+    finishGame();
+    return;
+  }
+
+  current = currentQuestions[index];
+  locked = false;
+  hintUsed = false;
+  timeLeft = 20;
+
+  const level = Math.floor(index / 5) + 1;
+  $("score").textContent = score;
+  $("level").textContent = String(level).padStart(2, "0");
+  $("combo").textContent = "×" + combo;
+  $("time").textContent = timeLeft + "s";
+  $("category").textContent = current.cat;
+  $("questionNumber").textContent =
+    "QUESTION " + String(index + 1).padStart(2, "0") + " / 15";
+  $("missionLabel").textContent =
+    "// " + (level === 1 ? "INITIALIZING SYSTEM" :
+    level === 2 ? "COMPLEXITY INCREASED" : "ADVANCED PROTOCOL");
+  $("progressBar").style.width = (index / 15 * 100) + "%";
+  $("question").textContent = current.q;
+
+  $("codeBox").style.display = current.code ? "block" : "none";
+  $("codeBox").textContent = current.code
+    ? current.code.replace(/\\n/g, "\n") : "";
+
+  $("feedback").textContent = "";
+  $("feedback").className = "";
+  $("hintBtn").disabled = false;
+  $("nextBtn").disabled = true;
+  $("nextBtn").textContent = index === 14
+    ? "VIEW RESULTS →" : "NEXT CHALLENGE →";
+
+  const letters = ["A", "B", "C", "D"];
+  $("answers").innerHTML = "";
+
+  current.o.forEach((option, i) => {
+    const btn = document.createElement("button");
+    btn.className = "answer";
+    const letter = document.createElement("span");
+    letter.className = "letter";
+    letter.textContent = letters[i];
+    const text = document.createElement("span");
+    text.textContent = option;
+    btn.append(letter, text);
+    btn.onclick = () => chooseAnswer(i, btn);
+    $("answers").appendChild(btn);
+  });
+
+  startTimer();
+}
+
+function startTimer() {
+  updateTimerBar();
+  timer = setInterval(() => {
+    timeLeft--;
+    $("time").textContent = timeLeft + "s";
+    updateTimerBar();
+
+    if (timeLeft <= 5) $("time").style.color = "var(--red)";
+    else $("time").style.color = "var(--text)";
+
+    if (timeLeft <= 0) {
+      clearInterval(timer);
+      chooseAnswer(-1, null);
+    }
+  }, 1000);
+}
+
+function updateTimerBar() {
+  $("timerBar").style.width = (timeLeft / 20 * 100) + "%";
+  $("timerBar").style.background =
+    timeLeft <= 5 ? "var(--red)" : "var(--green)";
+}
+
+function chooseAnswer(choice, button) {
+  if (locked) return;
+  locked = true;
+  clearInterval(timer);
+  answered++;
+
+  const buttons = [...$("answers").children];
+  buttons.forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === current.a) btn.classList.add("correct");
+    if (i === choice && choice !== current.a) btn.classList.add("wrong");
+  });
+
+  if (choice === current.a) {
+    correct++;
+    combo++;
+    bestCombo = Math.max(bestCombo, combo);
+    const points = 100 + Math.max(0, timeLeft) * 5
+      + Math.min(combo - 1, 5) * 20;
+    score += points;
+    $("feedback").className = "good";
+    $("feedback").textContent = "✓ CORRECT! +" + points + " POINTS. " + current.why;
+  } else {
+    combo = 0;
+    $("feedback").className = "bad";
+    $("feedback").textContent = (choice === -1 ? "⌛ TIME EXPIRED. " : "✕ NOT QUITE. ")
+      + current.why;
+  }
+
+  $("score").textContent = score;
+  $("combo").textContent = "×" + combo;
+  $("hintBtn").disabled = true;
+  $("nextBtn").disabled = false;
+  $("progressBar").style.width = ((index + 1) / 15 * 100) + "%";
+}
+
+function useHint() {
+  if (locked || hintUsed) return;
+  hintUsed = true;
+  score = Math.max(0, score - 10);
+  $("score").textContent = score;
+  $("feedback").className = "";
+  $("feedback").textContent = "HINT: " + current.hint;
+  $("hintBtn").disabled = true;
+}
+
+function nextQuestion() {
+  if (!locked) return;
+  index++;
+  renderQuestion();
+}
+
+function finishGame() {
+  clearInterval(timer);
+  $("game").classList.add("hidden");
+  $("result").classList.remove("hidden");
+  $("finalScore").textContent = score;
+  $("correctCount").textContent = correct + "/15";
+  $("accuracy").textContent = Math.round(correct / 15 * 100) + "%";
+  $("bestCombo").textContent = "×" + bestCombo;
+
+  const oldBest = best();
+  if (score > oldBest) {
+    try { localStorage.setItem("bytequestBest", score); } catch(e) {}
+  }
+  $("bestScore").textContent = Math.max(score, oldBest);
+
+  let rank, message;
+  if (correct >= 13) {
+    rank = "RANK: NEURAL ARCHITECT";
+    message = "Outstanding reasoning! You handled the challenges like a systems thinker.";
+    $("resultTitle").textContent = "SYSTEM MASTERED";
+  } else if (correct >= 10) {
+    rank = "RANK: CODE COMMANDER";
+    message = "Excellent work. Keep exploring algorithms, engineering and cyber safety.";
+    $("resultTitle").textContent = "MISSION SUCCESS";
+  } else if (correct >= 7) {
+    rank = "RANK: CIRCUIT RUNNER";
+    message = "Good progress. Review the explanations and try another mission.";
+    $("resultTitle").textContent = "MISSION COMPLETE";
+  } else {
+    rank = "RANK: ROOKIE";
+    message = "Every engineer starts somewhere. Learn from each challenge and try again.";
+    $("resultTitle").textContent = "TRAINING COMPLETE";
+  }
+  $("rank").textContent = rank;
+  $("resultMessage").textContent = message;
+}
+
+function goHome() {
+  clearInterval(timer);
+  $("game").classList.add("hidden");
+  $("result").classList.add("hidden");
+  $("home").classList.remove("hidden");
+  $("bestScore").textContent = best();
+}
+</script>
+</body>
+</html>
