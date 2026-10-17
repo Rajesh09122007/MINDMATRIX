@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#142521">
+  <meta name="description" content="Shift lanes, collect data shards, and solve question gates in an endless educational runner.">
+  <title>KNOW//RUN — The Learning Express</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f6f4e9;
+      --muted: #a5b9ab;
+      --deep: #101a19;
+      --panel: #172522;
+      --edge: #425b4e;
+      --mint: #c7ff80;
+      --coral: #ff987d;
+      --aqua: #82ebdf;
+      --display: "Trebuchet MS", "Segoe UI", sans-serif;
+      --mono: "Cascadia Code", Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; min-height: 100vh; background-color: #101a19; background-image: linear-gradient(135deg, #9db77b0b 1px, transparent 1px), linear-gradient(45deg, #9db77b08 1px, transparent 1px); background-size: 32px 32px; color: var(--ink); font-family: var(--display); }
+    button { color: inherit; font: inherit; }
+    button:focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; }
+    .page { width: min(1200px, 100%); margin: 0 auto; padding: 22px 26px 26px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding-bottom: 18px; }
+    .brand { display: flex; align-items: center; gap: 11px; }
+    .brand-icon { display: grid; width: 40px; aspect-ratio: 1; place-items: center; border: 1px solid var(--mint); color: var(--mint); font: 20px var(--mono); }
+    .brand-name { font-size: 19px; font-weight: 900; letter-spacing: 0; }
+    .brand-sub { margin-top: 3px; color: var(--muted); font: 11px var(--mono); }
+    .top-actions { display: flex; align-items: center; gap: 9px; }
+    .icon-button { display: inline-flex; min-width: 42px; height: 40px; align-items: center; justify-content: center; gap: 8px; padding: 0 11px; border: 1px solid var(--edge); background: #192724; color: var(--ink); cursor: pointer; }
+    .icon-button:hover { border-color: var(--mint); }
+    .sound-label { font: 10px var(--mono); }
+    .game-frame { overflow: hidden; border: 1px solid #587260; border-radius: 4px; background: #243b34; box-shadow: 0 22px 65px #0005; }
+    .hud { display: grid; grid-template-columns: 1.1fr 1fr 1fr 1fr; gap: 1px; border-bottom: 1px solid #587260; background: #587260; }
+    .hud-stat { min-width: 0; padding: 13px 16px; background: #172522; }
+    .hud-label { color: var(--muted); font: 11px var(--mono); letter-spacing: 0; }
+    .hud-value { margin-top: 5px; overflow: hidden; font: 18px var(--mono); text-overflow: ellipsis; white-space: nowrap; }
+    .hud-stat:first-child .hud-value { color: var(--mint); }
+    .hud-stat:nth-child(2) .hud-value { color: var(--aqua); }
+    .lives { color: var(--coral); letter-spacing: 2px; }
+    .runway-wrap { position: relative; background: #1b302b; }
+    canvas { display: block; width: 100%; height: min(62vh, 560px); min-height: 400px; touch-action: none; }
+    .run-toast { position: absolute; top: 16px; left: 50%; max-width: calc(100% - 24px); padding: 8px 13px; transform: translateX(-50%); border: 1px solid #c7ff8066; background: #12201ed9; color: var(--mint); font: 11px var(--mono); text-align: center; pointer-events: none; }
+    .run-toast[hidden] { display: none; }
+    .game-controls { display: flex; min-height: 55px; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 15px; border-top: 1px solid #587260; background: #172522; }
+    .control-copy { color: var(--muted); font-size: 12px; }
+    kbd { padding: 3px 6px; border: 1px solid #52665b; background: #202e29; color: var(--ink); font: 10px var(--mono); }
+    .lane-buttons { display: flex; gap: 7px; }
+    .lane-button { display: grid; width: 39px; height: 34px; place-items: center; border: 1px solid var(--edge); background: #202e29; color: var(--mint); font-size: 18px; cursor: pointer; }
+    .lane-button:hover { border-color: var(--mint); }
+    .below { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; padding-top: 20px; }
+    .section-title { margin: 0 0 11px; color: var(--mint); font: 12px var(--mono); }
+    .how-copy { max-width: 690px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.75; }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 13px; }
+    .step { min-height: 70px; padding: 10px; border: 1px solid #30463c; background: #14211f; }
+    .step strong { display: block; margin-bottom: 5px; color: var(--ink); font-size: 12px; }
+    .step span { color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .sound-note { margin-top: 12px; color: #9db2a3; font-size: 11px; line-height: 1.6; }
+
+    .overlay { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; overflow-y: auto; padding: 22px; background: #0b151178; backdrop-filter: blur(3px); }
+    .overlay[hidden] { display: none; }
+    .dialog { width: min(510px, 100%); padding: 23px; border: 1px solid #81976c; background: #172522f7; box-shadow: 0 18px 60px #0008; animation: pop-in 230ms ease-out both; }
+    .intro-dialog { width: min(440px, 100%); padding: 20px 22px; }
+    .intro-dialog h1 { margin-block: 7px; font-size: 31px; }
+    .intro-dialog p { margin: 8px 0; font-size: 13px; }
+    .intro-keys { margin-top: 10px !important; color: #d6e4d8 !important; font: 10px var(--mono) !important; }
+    .intro-dialog .primary-button { min-height: 42px; margin-top: 8px; }
+    .dialog-kicker { color: var(--mint); font: 10px var(--mono); }
+    .dialog h1, .dialog h2 { margin: 8px 0; font-size: 29px; line-height: 1.12; }
+    .dialog p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+    .question-options { display: grid; gap: 8px; margin-top: 16px; }
+    .answer { display: flex; min-height: 47px; align-items: center; gap: 12px; padding: 8px 11px; border: 1px solid #465b50; background: #202f2a; text-align: left; cursor: pointer; }
+    .answer:hover:not(:disabled) { border-color: var(--mint); background: #2b3b30; }
+    .answer:disabled { cursor: default; }
+    .answer-letter { display: grid; width: 27px; height: 27px; flex: 0 0 auto; place-items: center; border: 1px solid #637764; color: var(--mint); font: 11px var(--mono); }
+    .answer.correct { border-color: var(--mint); background: #263721; }
+    .answer.incorrect { border-color: var(--coral); background: #382522; }
+    .feedback { min-height: 43px; margin-top: 12px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .feedback.good { color: var(--mint); }
+    .feedback.bad { color: #ffb29d; }
+    .primary-button { display: flex; width: 100%; min-height: 46px; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 0 13px; border: 1px solid var(--mint); background: var(--mint); color: #132019; font-size: 14px; font-weight: 900; cursor: pointer; }
+    .primary-button:hover { background: #dcff9d; }
+    .primary-button:disabled { opacity: .5; cursor: default; }
+    .button-key { color: #52643d; font: 10px var(--mono); }
+    .intro-list { display: grid; gap: 8px; margin: 16px 0; padding: 0; list-style: none; }
+    .intro-list li { padding: 9px 10px; border-left: 2px solid var(--mint); background: #202f2a; color: #d1ddd3; font-size: 12px; line-height: 1.5; }
+    .level-result { color: var(--aqua) !important; }
+    .lives-result { color: var(--coral) !important; }
+    @keyframes pop-in { from { opacity: 0; transform: translateY(9px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+    @media (max-width: 700px) {
+      .page { padding: 13px 13px 20px; }
+      .hud-stat { padding: 9px 10px; }
+      .hud-label { font-size: 10px; }
+      .hud-value { font-size: 14px; }
+      canvas { height: 58vh; min-height: 420px; }
+      .below { grid-template-columns: 1fr; gap: 16px; }
+      .game-controls { align-items: flex-start; }
+      .control-copy { max-width: 65%; line-height: 1.7; }
+    }
+    @media (max-width: 430px) {
+      .page { padding-inline: 9px; }
+      .brand-icon { width: 34px; }
+      .brand-name { font-size: 16px; }
+      .brand-sub { font-size: 9px; }
+      .sound-label { display: none; }
+      .icon-button { min-width: 40px; }
+      .hud { grid-template-columns: 1fr 1fr; }
+      .hud-stat { padding: 8px 10px; }
+      .hud-value { margin-top: 3px; }
+      canvas { height: 58vh; min-height: 420px; }
+      .game-controls { gap: 8px; padding-inline: 10px; }
+      .control-copy { font-size: 11px; }
+      .lane-button { width: 35px; }
+      .steps { grid-template-columns: 1fr; }
+      .step { min-height: 0; }
+      .dialog { padding: 18px; }
+      .intro-dialog { width: min(350px, 100%); padding: 17px; }
+      .intro-dialog h1 { font-size: 27px; }
+      #question-overlay { padding: 10px; }
+      #question-overlay .dialog { padding: 14px; }
+      #question-overlay .dialog h2 { margin: 5px 0; font-size: 23px; }
+      #question-overlay .dialog p { margin: 8px 0; font-size: 13px; }
+      #question-options { gap: 6px; margin-top: 10px; }
+      .answer { min-height: 40px; padding: 6px 9px; }
+      .answer-letter { width: 25px; height: 25px; }
+      .feedback { min-height: 30px; margin-top: 8px; }
+      #continue-button { min-height: 42px; margin-top: 7px; }
+      .dialog h1, .dialog h2 { font-size: 25px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">KN//</div>
+        <div><div class="brand-name">KNOW<span style="color:var(--mint)">//</span>RUN</div><div class="brand-sub">THE LEARNING EXPRESS</div></div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-button" id="sound-button" type="button" aria-pressed="false" aria-label="Turn sound on"><span aria-hidden="true">♫</span><span class="sound-label" id="sound-label">SOUND OFF</span></button>
+        <button class="icon-button" id="help-button" type="button" aria-label="Show game guide"><span aria-hidden="true">?</span><span class="sound-label">HOW TO PLAY</span></button>
+      </div>
+    </header>
+
+    <section class="game-frame" aria-label="Know Run game">
+      <div class="hud">
+        <div class="hud-stat"><div class="hud-label">CURRENT SECTOR</div><div class="hud-value" id="hud-level">01 / MOSSY CIRCUIT</div></div>
+        <div class="hud-stat"><div class="hud-label">DATA CREDITS</div><div class="hud-value" id="hud-score">000000</div></div>
+        <div class="hud-stat"><div class="hud-label">RUN STREAK</div><div class="hud-value" id="hud-streak">x0</div></div>
+        <div class="hud-stat"><div class="hud-label">LIVES</div><div class="hud-value lives" id="hud-lives" aria-label="3 lives">♥ ♥ ♥</div></div>
+      </div>
+      <div class="runway-wrap" id="runway-wrap">
+        <canvas id="scene" aria-label="Three-lane endless runner. Collect glowing data shards and answer the upcoming quiz gates."></canvas>
+        <div class="run-toast" id="run-toast" role="status" hidden></div>
+
+        <section class="overlay" id="intro-overlay" role="dialog" aria-labelledby="intro-title" aria-modal="true">
+          <div class="dialog intro-dialog">
+            <div class="dialog-kicker">A LITTLE KNOWLEDGE GOES A LONG WAY</div>
+            <h1 id="intro-title">Run far.<br>Think fast.</h1>
+            <p>Three lanes, glowing shard trails, and a quiz gate every few seconds. Bank a streak, keep your hearts, and see how far you can run.</p>
+            <p class="intro-keys">← → / A D / SWIPE TO MOVE · 1–4 TO ANSWER</p>
+            <button class="primary-button" id="start-button" type="button"><span>START RUN</span><span class="button-key">ENTER</span></button>
+          </div>
+        </section>
+
+        <section class="overlay" id="question-overlay" role="dialog" aria-labelledby="question-title" aria-modal="true" hidden>
+          <div class="dialog">
+            <div class="dialog-kicker" id="question-kicker">QUESTION GATE 1 / 3</div>
+            <h2 id="question-title">The path ahead asks…</h2>
+            <p id="question-prompt"></p>
+            <div class="question-options" id="question-options"></div>
+            <div class="feedback" id="feedback" aria-live="polite"></div>
+            <button class="primary-button" id="continue-button" type="button" disabled><span>CHOOSE AN ANSWER</span><span class="button-key">1–4</span></button>
+          </div>
+        </section>
+
+        <section class="overlay" id="level-overlay" role="dialog" aria-labelledby="level-title" aria-modal="true" hidden>
+          <div class="dialog">
+            <div class="dialog-kicker">SECTOR COMPLETE / CHECKPOINT REACHED</div>
+            <h2 id="level-title">World cleared!</h2>
+            <p id="level-copy" class="level-result"></p>
+            <p id="lives-copy" class="lives-result"></p>
+            <button class="primary-button" id="next-level-button" type="button"><span>RUN THE NEXT WORLD</span><span class="button-key">ENTER</span></button>
+          </div>
+        </section>
+
+        <section class="overlay" id="gameover-overlay" role="dialog" aria-labelledby="gameover-title" aria-modal="true" hidden>
+          <div class="dialog">
+            <div class="dialog-kicker">RUN REPORT / ALL LIVES USED</div>
+            <h2 id="gameover-title">Every mile counts.</h2>
+            <p id="gameover-copy"></p>
+            <button class="primary-button" id="again-button" type="button"><span>RUN IT BACK</span><span class="button-key">ENTER</span></button>
+          </div>
+        </section>
+      </div>
+      <div class="game-controls">
+        <div class="control-copy">Shift lanes <kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd><br>Answer a gate with <kbd>1</kbd>–<kbd>4</kbd></div>
+        <div class="lane-buttons" aria-label="Lane controls">
+          <button class="lane-button" id="left-button" type="button" aria-label="Move left">←</button>
+          <button class="lane-button" id="right-button" type="button" aria-label="Move right">→</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="below" aria-label="How this game works">
+      <div>
+        <h2 class="section-title">THE LOOP / RUN → THINK → LEVEL UP</h2>
+        <p class="how-copy">Sprint through three-lane worlds, slide between lanes for data shards, then hit a question gate every few hundred metres. Your run pauses while you answer, so take a breath and think. Three gates clear a sector; the journey continues in a fresh place with a different subject. Shards earn 10 credits, correct answers earn 100 plus a streak bonus, and every third sector offers a spare heart. Misses cost a heart and reset your streak.</p>
+        <p class="sound-note">Optional browser-generated sound: a bright answer chime, a soft low note for a miss, and a short level-up flourish. Sound is off until you turn it on.</p>
+      </div>
+      <div>
+        <h2 class="section-title">FIVE WORLDS / INFINITE ROUTE</h2>
+        <div class="steps">
+          <div class="step"><strong>01 · MOSSY CIRCUIT</strong><span>Patterns &amp; logic</span></div>
+          <div class="step"><strong>02 · CLOUDLINE</strong><span>Science &amp; nature</span></div>
+          <div class="step"><strong>03 · PIXEL PORT</strong><span>Code &amp; computing</span></div>
+          <div class="step"><strong>04 · SUNSTONE DESERT</strong><span>Math &amp; numbers</span></div>
+          <div class="step"><strong>05 · DEEP ARCHIVE</strong><span>Digital safety</span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    "use strict";
+
+    const canvas = document.querySelector("#scene");
+    const context = canvas.getContext("2d");
+    const $ = selector => document.querySelector(selector);
+    const themes = [
+      { name: "MOSSY CIRCUIT", category: "Patterns & logic", sky: "#456c63", far: "#719272", near: "#b0b96f", ground: "#273c32", track: "#39483c", accent: "#dbf781", accent2: "#ffc97a", decor: "moss" },
+      { name: "CLOUDLINE", category: "Science & nature", sky: "#568eaa", far: "#a3bdab", near: "#d7ce93", ground: "#536c63", track: "#778477", accent: "#c8ffe8", accent2: "#ffe3a0", decor: "cloud" },
+      { name: "PIXEL PORT", category: "Code & computing", sky: "#57517b", far: "#7976a0", near: "#c28f91", ground: "#302d48", track: "#56526d", accent: "#a4ffe5", accent2: "#ffad88", decor: "pixel" },
+      { name: "SUNSTONE DESERT", category: "Math & numbers", sky: "#b87855", far: "#d6a36c", near: "#efd08b", ground: "#704d3e", track: "#997158", accent: "#fff0a1", accent2: "#ffa989", decor: "desert" },
+      { name: "DEEP ARCHIVE", category: "Digital safety", sky: "#426d76", far: "#79a39a", near: "#c4bf8b", ground: "#263b41", track: "#456166", accent: "#8dfff0", accent2: "#e9d38b", decor: "archive" }
+    ];
+
+    const questions = {
+      logic: [
+        { prompt: "A sequence goes 3, 6, 12, 24. What comes next?", answers: ["36", "42", "48", "30"], correct: 2, explain: "Each number doubles, so 24 × 2 = 48." },
+        { prompt: "All zips are zaps. No zaps are blue. Can a zip be blue?", answers: ["Yes, always", "No", "Only on Tuesdays", "Not enough information"], correct: 1, explain: "Zips are a type of zap, and no zap is blue. So no zip can be blue." },
+        { prompt: "A robot faces north. It turns right, turns around, then turns left. Which way now?", answers: ["North", "East", "South", "West"], correct: 2, explain: "North → East → West → South." },
+        { prompt: "Which is the best counterexample to ‘every prime number is odd’?", answers: ["1", "2", "9", "15"], correct: 1, explain: "2 is prime and even, so it disproves the statement." }
+      ],
+      science: [
+        { prompt: "Why do astronauts appear weightless while orbiting Earth?", answers: ["There is no gravity in space", "They and their spacecraft are in continuous free fall", "Space has no mass", "Their suits cancel gravity"], correct: 1, explain: "Gravity is still strong in orbit. Astronauts feel weightless because everything is falling together." },
+        { prompt: "A plant bends toward a window. Which stimulus is it responding to?", answers: ["Sound", "Gravity only", "Light", "Temperature only"], correct: 2, explain: "Phototropism is directional plant growth in response to light." },
+        { prompt: "Which change would most directly speed up evaporation?", answers: ["Lower the temperature", "Increase airflow", "Use a narrower container", "Cover the liquid"], correct: 1, explain: "Airflow carries away water vapour near the surface, allowing more to evaporate." },
+        { prompt: "In a food web, what is the most likely result of losing a top predator?", answers: ["All plants disappear at once", "Prey populations may rise and reshape the web", "Energy stops entering the web", "Decomposers stop working"], correct: 1, explain: "Fewer predators can allow prey numbers to increase, affecting other species and resources." }
+      ],
+      code: [
+        { prompt: "What does this print?  let x = 2;  x = x + 3;  print(x)", answers: ["2", "3", "5", "x + 3"], correct: 2, explain: "The value 3 is added to 2 and stored back in x." },
+        { prompt: "A loop runs while count < 4, starting with count = 1. If count increases by 1 each time, how many runs?", answers: ["3", "4", "5", "It never ends"], correct: 0, explain: "The values 1, 2, and 3 satisfy count < 4, so the loop runs three times." },
+        { prompt: "Which data structure is best for checking whether an item is present, without caring about order?", answers: ["Queue", "Stack", "Set", "Linked list"], correct: 2, explain: "A set stores unique items and supports direct membership checks." },
+        { prompt: "An algorithm checks every pair in a list of n items. How does its work grow?", answers: ["Constant: O(1)", "Linear: O(n)", "Quadratic: O(n²)", "Logarithmic: O(log n)"], correct: 2, explain: "There are roughly n × n pairs, so the work grows quadratically." }
+      ],
+      math: [
+        { prompt: "A route is 120 km long. You travel 25% of it. How far have you gone?", answers: ["25 km", "30 km", "40 km", "45 km"], correct: 1, explain: "25% is one quarter. 120 ÷ 4 = 30 km." },
+        { prompt: "A fair die is rolled twice. What is the chance of getting two sixes?", answers: ["1 in 6", "1 in 12", "1 in 18", "1 in 36"], correct: 3, explain: "The independent chances multiply: 1/6 × 1/6 = 1/36." },
+        { prompt: "A number is increased by 20%, then decreased by 20%. Compared with the start, it is…", answers: ["The same", "4% lower", "4% higher", "20% lower"], correct: 1, explain: "For 100: 100 → 120 → 96, which is 4% lower than 100." },
+        { prompt: "A train covers 150 km in 2.5 hours. What is its average speed?", answers: ["50 km/h", "55 km/h", "60 km/h", "75 km/h"], correct: 2, explain: "Speed = distance ÷ time = 150 ÷ 2.5 = 60 km/h." }
+      ],
+      safety: [
+        { prompt: "A message from ‘IT support’ asks for your sign-in code to prevent account closure. What is safest?", answers: ["Send it quickly", "Reply asking if it is real", "Do not share it; contact IT through an official channel", "Post it in the team chat"], correct: 2, explain: "One-time codes should never be shared. Verify unexpected requests through a known, official contact." },
+        { prompt: "A website uses HTTPS. What does that tell you?", answers: ["The site is definitely trustworthy", "The connection is encrypted, but the site itself may still be deceptive", "It cannot collect data", "It has no ads"], correct: 1, explain: "HTTPS protects data in transit; it is not a guarantee that a site is legitimate." },
+        { prompt: "Why use a unique password for each account?", answers: ["It makes typing faster", "A breach on one site cannot directly unlock all your other accounts", "It prevents every phishing attempt", "It removes the need for updates"], correct: 1, explain: "Unique passwords limit the damage if one service is breached. A password manager can help." },
+        { prompt: "An app asks for contacts, microphone, and location when it only needs a calculator. Best move?", answers: ["Allow everything", "Deny unnecessary access and choose another app if needed", "Share the request publicly", "Turn off the screen"], correct: 1, explain: "Grant only permissions that are necessary for the app's purpose." }
+      ]
+    };
+
+    const subjectOrder = ["logic", "science", "code", "math", "safety"];
+    const difficultyOrder = {
+      logic: [0, 1, 2, 3],
+      science: [1, 2, 3, 0],
+      code: [0, 1, 2, 3],
+      math: [0, 3, 2, 1],
+      safety: [2, 3, 1, 0]
+    };
+    const gatesPerLevel = 3;
+    let level = 1;
+    let score = 0;
+    let lives = 3;
+    let streak = 0;
+    let gateNumber = 0;
+    let levelCorrect = 0;
+    let progress = 0;
+    let playerLane = 1;
+    let laneVisual = 1;
+    let state = "ready";
+    let lastTime = 0;
+    let elapsed = 0;
+    let shardPhase = 0;
+    let shards = [];
+    let currentQuestion = null;
+    let questionAnswered = false;
+    let levelQuestionPrompts = new Set();
+    const questionHistory = new Map();
+    const lastQuestionByCategory = new Map();
+    let toastUntil = 0;
+    let audioContext = null;
+    let soundEnabled = false;
+    let deviceScale = 1;
+    let viewWidth = 800;
+    let viewHeight = 500;
+    let touchStartX = null;
+    let touchStartY = null;
+    let gateQueue = [];
+
+    function themeForLevel(number = level) { return themes[(number - 1) % themes.length]; }
+    function subjectForLevel(number = level) { return subjectOrder[(number - 1) % subjectOrder.length]; }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      deviceScale = Math.min(window.devicePixelRatio || 1, 2);
+      viewWidth = Math.max(1, rect.width);
+      viewHeight = Math.max(1, rect.height);
+      canvas.width = Math.round(viewWidth * deviceScale);
+      canvas.height = Math.round(viewHeight * deviceScale);
+      context.setTransform(deviceScale, 0, 0, deviceScale, 0, 0);
+    }
+
+    function roundedRect(ctx, x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, height, r);
+    }
+
+    function drawScene(time) {
+      const theme = themeForLevel();
+      const width = viewWidth;
+      const height = viewHeight;
+      const horizon = height * 0.39;
+      const center = width * 0.5;
+      const roadTop = width * 0.1;
+      const roadBottom = width * 0.38;
+      const scroll = (elapsed * (state === "running" ? 1 : 0.23)) % 1;
+      context.clearRect(0, 0, width, height);
+
+      const sky = context.createLinearGradient(0, 0, 0, height);
+      sky.addColorStop(0, theme.sky);
+      sky.addColorStop(.55, theme.far);
+      sky.addColorStop(1, theme.near);
+      context.fillStyle = sky;
+      context.fillRect(0, 0, width, height);
+
+      context.globalAlpha = .5;
+      context.fillStyle = theme.accent2;
+      context.beginPath();
+      context.arc(width * .79, height * .16, Math.min(width, height) * .055, 0, Math.PI * 2);
+      context.fill();
+      context.globalAlpha = 1;
+
+      drawHills(width, horizon, theme, time);
+      drawDecor(width, height, horizon, theme, scroll, time);
+
+      context.fillStyle = theme.ground;
+      context.fillRect(0, horizon, width, height - horizon);
+      const roadTopLeft = center - roadTop;
+      const roadTopRight = center + roadTop;
+      const roadBottomLeft = center - roadBottom;
+      const roadBottomRight = center + roadBottom;
+      context.fillStyle = theme.track;
+      context.beginPath();
+      context.moveTo(roadTopLeft, horizon);
+      context.lineTo(roadTopRight, horizon);
+      context.lineTo(roadBottomRight, height);
+      context.lineTo(roadBottomLeft, height);
+      context.closePath();
+      context.fill();
+
+      context.strokeStyle = "#f4f6db99";
+      context.lineWidth = 2.5;
+      for (let separator = 1; separator <= 2; separator += 1) {
+        const ratio = separator / 3;
+        const topX = roadTopLeft + (roadTopRight - roadTopLeft) * ratio;
+        const bottomX = roadBottomLeft + (roadBottomRight - roadBottomLeft) * ratio;
+        context.beginPath();
+        context.moveTo(topX, horizon);
+        context.lineTo(bottomX, height);
+        context.stroke();
+      }
+      context.strokeStyle = theme.accent;
+      context.globalAlpha = .54;
+      context.lineWidth = 2;
+      context.beginPath();
+      context.moveTo(roadTopLeft, horizon);
+      context.lineTo(roadBottomLeft, height);
+      context.moveTo(roadTopRight, horizon);
+      context.lineTo(roadBottomRight, height);
+      context.stroke();
+      context.globalAlpha = 1;
+
+      context.globalAlpha = .38;
+      context.strokeStyle = theme.accent;
+      context.lineWidth = 1;
+      const stripeCount = 9;
+      for (let i = 0; i < stripeCount; i += 1) {
+        const phase = (i / stripeCount + scroll) % 1;
+        const perspective = phase * phase;
+        const y = horizon + perspective * (height - horizon);
+        const half = roadTop + perspective * (roadBottom - roadTop);
+        context.beginPath();
+        context.moveTo(center - half, y);
+        context.lineTo(center + half, y);
+        context.stroke();
+      }
+      context.globalAlpha = 1;
+
+      drawShards(center, horizon, roadTop, roadBottom, height, theme, time);
+      drawRunner(center, horizon, roadTop, roadBottom, height, theme, time);
+      if (state === "running") drawUpcomingGate(center, horizon, roadTop, height, theme);
+    }
+
+    function drawHills(width, horizon, theme, time) {
+      const drift = Math.sin(time * .00013) * 12;
+      context.fillStyle = theme.far;
+      context.beginPath();
+      context.moveTo(0, horizon);
+      context.lineTo(0, horizon * .58);
+      context.lineTo(width * .16, horizon * .31 + drift);
+      context.lineTo(width * .31, horizon * .65);
+      context.lineTo(width * .48, horizon * .2);
+      context.lineTo(width * .67, horizon * .62);
+      context.lineTo(width * .86, horizon * .28 - drift);
+      context.lineTo(width, horizon * .53);
+      context.lineTo(width, horizon);
+      context.closePath();
+      context.fill();
+      context.globalAlpha = .5;
+      context.fillStyle = theme.near;
+      context.beginPath();
+      context.moveTo(0, horizon);
+      context.lineTo(0, horizon * .76);
+      context.lineTo(width * .23, horizon * .57);
+      context.lineTo(width * .43, horizon * .82);
+      context.lineTo(width * .72, horizon * .55);
+      context.lineTo(width, horizon * .76);
+      context.lineTo(width, horizon);
+      context.closePath();
+      context.fill();
+      context.globalAlpha = 1;
+    }
+
+    function drawDecor(width, height, horizon, theme, scroll, time) {
+      for (const side of [-1, 1]) {
+        for (let i = 0; i < 5; i += 1) {
+          const phase = (i / 5 + scroll * .72) % 1;
+          const depth = phase * phase;
+          const y = horizon + depth * (height - horizon) * .92;
+          const x = width * .5 + side * (width * (.17 + depth * .36));
+          const scale = .24 + depth * 1.18;
+          drawProp(x, y, scale, theme, i, side, time);
+        }
+      }
+    }
+
+    function drawProp(x, y, scale, theme, index, side, time) {
+      context.save();
+      context.translate(x, y);
+      context.scale(scale, scale);
+      const sway = Math.sin(time * .001 + index + side) * 3;
+      if (theme.decor === "cloud") {
+        context.fillStyle = "#f5f3dfbb";
+        context.beginPath();
+        context.ellipse(sway, -31, 19, 8, 0, 0, Math.PI * 2);
+        context.ellipse(sway - 10, -30, 9, 7, 0, 0, Math.PI * 2);
+        context.ellipse(sway + 11, -30, 11, 9, 0, 0, Math.PI * 2);
+        context.fill();
+      } else if (theme.decor === "pixel" || theme.decor === "archive") {
+        context.fillStyle = index % 2 ? theme.accent : theme.accent2;
+        context.globalAlpha = .52;
+        context.fillRect(-11, -44 - sway, 22, 46);
+        context.fillStyle = theme.ground;
+        context.fillRect(-6, -37 - sway, 5, 5);
+        context.fillRect(3, -28 - sway, 5, 5);
+        context.fillRect(-6, -19 - sway, 5, 5);
+      } else if (theme.decor === "desert") {
+        context.fillStyle = theme.accent2;
+        context.fillRect(-4, -44, 8, 44);
+        context.fillRect(-14, -31, 8, 19);
+        context.fillRect(6, -38, 8, 22);
+        context.fillRect(-12, -35, 7, 5);
+        context.fillRect(5, -43, 7, 5);
+      } else {
+        context.fillStyle = "#263c34";
+        context.fillRect(-3, -33, 6, 34);
+        context.fillStyle = index % 2 ? theme.accent2 : theme.accent;
+        context.beginPath();
+        context.ellipse(sway, -39, 15, 18, 0, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = "#f8ffcf";
+        context.fillRect(sway - 4, -41, 3, 3);
+        context.fillRect(sway + 3, -41, 3, 3);
+      }
+      context.restore();
+    }
+
+    function drawShards(center, horizon, roadTop, roadBottom, height, theme, time) {
+      for (const shard of shards) {
+        const depth = shard.depth;
+        const y = horizon + depth * depth * (height - horizon) * .86;
+        const roadHalf = roadTop + depth * (roadBottom - roadTop);
+        const x = center + (shard.lane - 1) * roadHalf * .61;
+        const size = 3 + depth * 11;
+        const bob = Math.sin(time * .006 + shard.phase) * size * .16;
+        context.save();
+        context.translate(x, y - bob);
+        context.rotate(Math.PI / 4);
+        context.shadowColor = theme.accent;
+        context.shadowBlur = 8 + depth * 12;
+        context.fillStyle = theme.accent;
+        context.fillRect(-size / 2, -size / 2, size, size);
+        context.restore();
+      }
+    }
+
+    function drawRunner(center, horizon, roadTop, roadBottom, height, theme, time) {
+      const laneOffset = (laneVisual - 1) * roadBottom * .61;
+      const x = center + laneOffset;
+      const y = height * .82;
+      const scale = Math.max(.9, Math.min(1.25, height / 420));
+      const radius = 25;
+      const rolling = state === "running" ? time * .012 : Math.PI * .12;
+      context.save();
+      context.translate(x, y);
+      context.scale(scale, scale);
+      context.fillStyle = "#10191965";
+      context.beginPath();
+      context.ellipse(0, 9, 29, 8, 0, 0, Math.PI * 2);
+      context.fill();
+
+      const ballGradient = context.createRadialGradient(-9, -12, 2, 0, 0, radius * 1.2);
+      ballGradient.addColorStop(0, "#fffde0");
+      ballGradient.addColorStop(.22, theme.accent);
+      ballGradient.addColorStop(.76, theme.accent2);
+      ballGradient.addColorStop(1, "#252f35");
+      context.shadowColor = theme.accent;
+      context.shadowBlur = 15;
+      context.fillStyle = ballGradient;
+      context.beginPath();
+      context.arc(0, 0, radius, 0, Math.PI * 2);
+      context.fill();
+      context.shadowBlur = 0;
+
+      context.save();
+      context.beginPath();
+      context.arc(0, 0, radius - 1, 0, Math.PI * 2);
+      context.clip();
+      context.rotate(rolling);
+      context.strokeStyle = "#18322c9c";
+      context.lineWidth = 3;
+      context.beginPath();
+      context.ellipse(0, 0, radius * .38, radius, 0, 0, Math.PI * 2);
+      context.stroke();
+      context.beginPath();
+      context.ellipse(0, 0, radius * .78, radius * .48, 0, 0, Math.PI * 2);
+      context.stroke();
+      context.strokeStyle = "#ffffffa3";
+      context.lineWidth = 2;
+      context.beginPath();
+      context.ellipse(0, 0, radius * .89, radius * .23, Math.PI * .25, 0, Math.PI * 2);
+      context.stroke();
+      context.restore();
+
+      context.fillStyle = "#ffffffcf";
+      context.beginPath();
+      context.ellipse(-9, -12, 6, 3.5, -.55, 0, Math.PI * 2);
+      context.fill();
+
+      context.strokeStyle = "#fffde0c9";
+      context.lineWidth = 1.5;
+      context.beginPath();
+      context.arc(0, 0, radius - .75, 0, Math.PI * 2);
+      context.stroke();
+      context.restore();
+    }
+
+    function drawUpcomingGate(center, horizon, roadTop, height, theme) {
+      const ratio = Math.max(0, Math.min(1, (gateQueue[gateNumber] - progress) / 240));
+      const depth = 1 - ratio;
+      const y = horizon + depth * depth * (height - horizon) * .76;
+      const half = roadTop + depth * (viewWidth * .38 - roadTop);
+      context.save();
+      context.globalAlpha = .14 + depth * .38;
+      context.strokeStyle = theme.accent;
+      context.lineWidth = 2 + depth * 4;
+      context.beginPath();
+      context.moveTo(center - half * .95, y);
+      context.lineTo(center - half * .95, y - 54 * depth);
+      context.lineTo(center + half * .95, y - 54 * depth);
+      context.lineTo(center + half * .95, y);
+      context.stroke();
+      context.restore();
+    }
+
+    function updateHud() {
+      const theme = themeForLevel();
+      $("#hud-level").textContent = String(level).padStart(2, "0") + " / " + theme.name;
+      $("#hud-score").textContent = String(score).padStart(6, "0");
+      $("#hud-streak").textContent = "x" + streak;
+      $("#hud-lives").textContent = lives > 0 ? Array.from({ length: 3 }, (_, i) => i < lives ? "♥" : "♡").join(" ") : "♡ ♡ ♡";
+      $("#hud-lives").setAttribute("aria-label", `${lives} of 3 lives remaining`);
+    }
+
+    function toast(message, duration = 1500) {
+      const element = $("#run-toast");
+      element.textContent = message;
+      element.hidden = false;
+      toastUntil = performance.now() + duration;
+    }
+
+    function queueQuestion() {
+      const category = subjectForLevel();
+      const bank = questions[category];
+      const unlockedQuestions = Math.min(bank.length, gatesPerLevel + Math.floor((level - 1) / 3));
+      const eligible = difficultyOrder[category].slice(0, unlockedQuestions).map(index => bank[index]);
+      let history = questionHistory.get(category) ?? new Set();
+      if (history.size >= bank.length) {
+        history = new Set();
+        questionHistory.set(category, history);
+      }
+      let candidates = eligible.filter(question =>
+        !history.has(question.prompt) &&
+        !levelQuestionPrompts.has(question.prompt) &&
+        question.prompt !== lastQuestionByCategory.get(category)
+      );
+      if (!candidates.length) {
+        candidates = eligible.filter(question =>
+          !levelQuestionPrompts.has(question.prompt) &&
+          question.prompt !== lastQuestionByCategory.get(category)
+        );
+      }
+      if (!candidates.length) {
+        candidates = bank.filter(question =>
+          !levelQuestionPrompts.has(question.prompt) &&
+          question.prompt !== lastQuestionByCategory.get(category)
+        );
+      }
+      const source = candidates[Math.floor(Math.random() * candidates.length)];
+      levelQuestionPrompts.add(source.prompt);
+      history.add(source.prompt);
+      questionHistory.set(category, history);
+      lastQuestionByCategory.set(category, source.prompt);
+      currentQuestion = { ...source, category, options: source.answers.map((answer, index) => ({ answer, correct: index === source.correct })).sort(() => Math.random() - .5) };
+      questionAnswered = false;
+      state = "question";
+      const theme = themeForLevel();
+      $("#question-kicker").textContent = `${theme.name} / ${theme.category} / GATE ${gateNumber + 1} OF ${gatesPerLevel}`;
+      $("#question-title").textContent = "The path ahead asks…";
+      $("#question-prompt").textContent = currentQuestion.prompt;
+      $("#question-options").replaceChildren();
+      $("#feedback").textContent = "";
+      $("#feedback").className = "feedback";
+      $("#continue-button").disabled = true;
+      $("#continue-button").innerHTML = '<span>CHOOSE AN ANSWER</span><span class="button-key">1–4</span>';
+      currentQuestion.options.forEach((option, index) => {
+        const button = document.createElement("button");
+        button.className = "answer";
+        button.type = "button";
+        button.innerHTML = `<span class="answer-letter">${index + 1}</span><span></span>`;
+        button.lastElementChild.textContent = option.answer;
+        button.addEventListener("click", () => chooseAnswer(index));
+        $("#question-options").append(button);
+      });
+      $("#question-overlay").hidden = false;
+      $("#question-options .answer").focus();
+      playTone(420, .1, "sine", .05);
+    }
+
+    function chooseAnswer(index) {
+      if (state !== "question" || questionAnswered || !currentQuestion) return;
+      questionAnswered = true;
+      const option = currentQuestion.options[index];
+      const buttons = [...$("#question-options").children];
+      buttons.forEach((button, optionIndex) => {
+        button.disabled = true;
+        if (currentQuestion.options[optionIndex].correct) button.classList.add("correct");
+        if (optionIndex === index && !option.correct) button.classList.add("incorrect");
+      });
+      if (option.correct) {
+        streak += 1;
+        levelCorrect += 1;
+        const reward = 100 + Math.min(streak - 1, 10) * 20;
+        score += reward;
+        $("#feedback").className = "feedback good";
+        $("#feedback").textContent = `Correct! +${reward} credits. ${currentQuestion.explain}`;
+        toast(`CLEAN HIT  +${reward} CREDITS`);
+        playTone(660, .12, "sine", .08);
+        window.setTimeout(() => playTone(880, .15, "sine", .05), 90);
+      } else {
+        lives -= 1;
+        streak = 0;
+        $("#feedback").className = "feedback bad";
+        $("#feedback").textContent = `Not quite. The right answer is ${currentQuestion.options.findIndex(item => item.correct) + 1}. ${currentQuestion.explain}`;
+        toast("SIGNAL SLOWED / ONE LIFE LOST", 1900);
+        playTone(180, .25, "triangle", .07);
+      }
+      gateNumber += 1;
+      updateHud();
+      $("#continue-button").disabled = false;
+      $("#continue-button").innerHTML = lives > 0
+        ? '<span>BACK TO THE RUN</span><span class="button-key">ENTER</span>'
+        : '<span>VIEW RUN REPORT</span><span class="button-key">ENTER</span>';
+    }
+
+    function continueRun() {
+      if (state !== "question" || !questionAnswered) return;
+      $("#question-overlay").hidden = true;
+      if (lives <= 0) { finishRun(); return; }
+      state = "running";
+      progress = gateNumber >= gatesPerLevel ? 1000 : Math.max(progress, gateQueue[gateNumber - 1] + 12);
+      toast("KEEP MOVING", 900);
+    }
+
+    function finishLevel() {
+      state = "levelup";
+      const bonus = 200 + level * 50;
+      score += bonus;
+      const earnedHeart = level % 3 === 0 && lives < 3;
+      if (earnedHeart) lives += 1;
+      updateHud();
+      $("#level-title").textContent = `${themeForLevel().name} cleared!`;
+      $("#level-copy").textContent = `Three gates cleared. +${bonus} sector bonus. Next up: ${themeForLevel(level + 1).name} / ${themeForLevel(level + 1).category}.`;
+      $("#lives-copy").textContent = earnedHeart ? "Checkpoint reward: a spare heart joined your pack." : level % 3 === 0 ? "Checkpoint reward earned, but your heart pack is already full." : "Clear every third sector to earn a spare heart.";
+      $("#level-overlay").hidden = false;
+      playLevelUp();
+    }
+
+    function nextLevel() {
+      $("#level-overlay").hidden = true;
+      level += 1;
+      gateNumber = 0;
+      levelCorrect = 0;
+      levelQuestionPrompts = new Set();
+      progress = 0;
+      shards = [];
+      gateQueue = [250, 500, 750];
+      state = "running";
+      updateHud();
+      toast(`${themeForLevel().name} / ${themeForLevel().category}`, 2200);
+    }
+
+    function finishRun() {
+      state = "gameover";
+      $("#gameover-copy").textContent = `You reached Sector ${String(level).padStart(2, "0")} — ${themeForLevel().name} — and banked ${score.toLocaleString()} data credits. ${levelCorrect} correct answer${levelCorrect === 1 ? "" : "s"} in your final sector.`;
+      $("#gameover-overlay").hidden = false;
+      playTone(135, .45, "sine", .07);
+    }
+
+    function startGame() {
+      level = 1;
+      score = 0;
+      lives = 3;
+      streak = 0;
+      gateNumber = 0;
+      levelCorrect = 0;
+      levelQuestionPrompts = new Set();
+      progress = 0;
+      elapsed = 0;
+      shards = [];
+      gateQueue = [250, 500, 750];
+      state = "running";
+      lastTime = performance.now();
+      $("#intro-overlay").hidden = true;
+      $("#gameover-overlay").hidden = true;
+      $("#level-overlay").hidden = true;
+      updateHud();
+      toast("MOSSY CIRCUIT / PATTERN GATES AHEAD", 2100);
+      if (soundEnabled) ensureAudio();
+    }
+
+    function moveLane(direction) {
+      if (state !== "running") return;
+      playerLane = Math.max(0, Math.min(2, playerLane + direction));
+    }
+
+    function updateGame(delta, time) {
+      laneVisual += (playerLane - laneVisual) * Math.min(1, delta * 11);
+      elapsed += delta * 1000;
+      if (state === "running") {
+        const speed = 88 + Math.min(level - 1, 20) * 3;
+        progress += delta * speed;
+        shardPhase += delta;
+        if (shardPhase > .58) {
+          shardPhase = 0;
+          if (Math.random() < .78) shards.push({ lane: Math.floor(Math.random() * 3), depth: .06, phase: Math.random() * 6 });
+        }
+        shards.forEach(shard => { shard.depth += delta * (speed / 550); });
+        shards = shards.filter(shard => {
+          if (shard.depth > .9) {
+            if (shard.lane === playerLane) {
+              score += 10;
+              updateHud();
+              playTone(920, .07, "sine", .035);
+              toast("DATA SHARD +10", 700);
+            }
+            return false;
+          }
+          return true;
+        });
+        if (gateNumber < gatesPerLevel && progress >= gateQueue[gateNumber]) queueQuestion();
+        if (progress >= 1000 && gateNumber >= gatesPerLevel) finishLevel();
+      }
+      if (toastUntil && time > toastUntil) {
+        $("#run-toast").hidden = true;
+        toastUntil = 0;
+      }
+      drawScene(time);
+    }
+
+    function frame(time) {
+      const delta = Math.min(.05, Math.max(0, (time - (lastTime || time)) / 1000));
+      lastTime = time;
+      updateGame(delta, time);
+      requestAnimationFrame(frame);
+    }
+
+    function ensureAudio() {
+      if (!audioContext) {
+        const AudioEngine = window.AudioContext || window.webkitAudioContext;
+        if (AudioEngine) audioContext = new AudioEngine();
+      }
+      if (audioContext?.state === "suspended") audioContext.resume();
+    }
+
+    function playTone(frequency, duration, type = "sine", volume = .05) {
+      if (!soundEnabled) return;
+      ensureAudio();
+      if (!audioContext) return;
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      oscillator.type = type;
+      oscillator.frequency.value = frequency;
+      gain.gain.setValueAtTime(volume, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(.001, audioContext.currentTime + duration);
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + duration);
+    }
+
+    function playLevelUp() {
+      playTone(440, .16, "triangle", .055);
+      window.setTimeout(() => playTone(554, .17, "triangle", .055), 120);
+      window.setTimeout(() => playTone(659, .28, "triangle", .06), 240);
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      $("#sound-button").setAttribute("aria-pressed", String(soundEnabled));
+      $("#sound-button").setAttribute("aria-label", soundEnabled ? "Turn sound off" : "Turn sound on");
+      $("#sound-label").textContent = soundEnabled ? "SOUND ON" : "SOUND OFF";
+      if (soundEnabled) {
+        ensureAudio();
+        playTone(660, .12, "sine", .05);
+      }
+    }
+
+    function handleKey(event) {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " "].includes(event.key)) event.preventDefault();
+      if (state === "question") {
+        if (!questionAnswered && /^[1-4]$/.test(event.key)) chooseAnswer(Number(event.key) - 1);
+        else if (questionAnswered && (event.key === "Enter" || event.key === " ")) continueRun();
+        return;
+      }
+      if ((state === "ready" || state === "gameover") && event.key === "Enter") {
+        if (state === "ready") startGame();
+        else startGame();
+        return;
+      }
+      if (state === "levelup" && event.key === "Enter") { nextLevel(); return; }
+      if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") moveLane(-1);
+      if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") moveLane(1);
+    }
+
+    $("#start-button").addEventListener("click", startGame);
+    $("#again-button").addEventListener("click", startGame);
+    $("#continue-button").addEventListener("click", continueRun);
+    $("#next-level-button").addEventListener("click", nextLevel);
+    $("#left-button").addEventListener("click", () => moveLane(-1));
+    $("#right-button").addEventListener("click", () => moveLane(1));
+    $("#sound-button").addEventListener("click", toggleSound);
+    $("#help-button").addEventListener("click", () => {
+      if (state === "ready") {
+        $("#intro-overlay").hidden = false;
+      } else if (state === "running") {
+        toast("← / → OR A / D TO SHIFT LANES · 1–4 AT QUIZ GATES", 2600);
+      }
+    });
+    document.addEventListener("keydown", handleKey);
+    canvas.addEventListener("pointerdown", event => {
+      touchStartX = event.clientX;
+      touchStartY = event.clientY;
+    });
+    canvas.addEventListener("pointerup", event => {
+      if (touchStartX === null || state !== "running") return;
+      const dx = event.clientX - touchStartX;
+      const dy = event.clientY - touchStartY;
+      if (Math.abs(dx) > 26 && Math.abs(dx) > Math.abs(dy)) moveLane(dx < 0 ? -1 : 1);
+      touchStartX = null;
+      touchStartY = null;
+    });
+
+    const observer = new ResizeObserver(resizeCanvas);
+    observer.observe(canvas);
+    resizeCanvas();
+    updateHud();
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
