@@ -1,0 +1,604 @@
+
+<!DOCTYPE html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="theme-color" content="#101210">
+	<meta name="description" content="Repair a corrupted signal path in this quick-fire circuit rotation puzzle.">
+	<title>PATCH//SHIFT - Network Recovery</title>
+	<style>
+		:root {
+			color-scheme: dark;
+			--page: #101210;
+			--panel: #181b17;
+			--panel-raised: #20241e;
+			--line: #34382f;
+			--line-bright: #505646;
+			--text: #f2f0e7;
+			--quiet: #9a9e8d;
+			--acid: #d4f26a;
+			--acid-soft: #425128;
+			--cyan: #7edbd2;
+			--red: #f48469;
+			--mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+			--display: "Bahnschrift SemiBold", "Aptos Display", "Segoe UI", sans-serif;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			min-width: 320px;
+			min-height: 100vh;
+			margin: 0;
+			color: var(--text);
+			background-color: var(--page);
+			background-image: radial-gradient(ellipse at 55% 8%, #303a2228, transparent 44%),
+				linear-gradient(#ffffff08 1px, transparent 1px),
+				linear-gradient(90deg, #ffffff08 1px, transparent 1px);
+			background-size: auto, 40px 40px, 40px 40px;
+			font-family: var(--display);
+		}
+
+		button { font: inherit; }
+		.app { width: min(1040px, 100%); margin: 0 auto; padding: 28px 28px 24px; }
+		.topbar, .brand, .top-meta, .section-top, .section-heading, .metric-label, .actions, .footer { display: flex; align-items: center; }
+		.topbar { justify-content: space-between; gap: 20px; padding-bottom: 26px; }
+		.brand { gap: 12px; min-width: 0; }
+		.brand-mark { display: grid; width: 38px; aspect-ratio: 1; flex: 0 0 auto; place-items: center; border: 1px solid var(--acid); color: var(--acid); font: 20px var(--mono); }
+		.brand-name { margin: 0; font-size: 17px; font-weight: 750; letter-spacing: 0; }
+		.brand-caption, .eyebrow, .mono, .metric-label, .io-label { font-family: var(--mono); }
+		.brand-caption { margin-top: 4px; color: var(--quiet); font-size: 13px; }
+		.top-meta { justify-content: flex-end; gap: 26px; }
+		.metric-label { gap: 8px; color: var(--quiet); font-size: 13px; text-transform: uppercase; }
+		.metric-value { margin-top: 5px; font: 17px var(--mono); }
+		.online-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--acid); box-shadow: 0 0 12px #d4f26990; }
+		.intro { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 20px; padding: 24px 0 26px; border-top: 1px solid var(--line); }
+		.eyebrow { color: var(--acid); font-size: 13px; }
+		h1 { margin: 11px 0 7px; font-size: 60px; font-weight: 800; line-height: .99; }
+		.slash { color: var(--acid); }
+		.intro-copy { max-width: 510px; margin: 0; color: var(--quiet); font-size: 16px; line-height: 1.7; }
+		.stage-badge { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border: 1px solid var(--line); color: var(--cyan); font: 13px var(--mono); white-space: nowrap; }
+		.stage-symbol { color: var(--acid); font-size: 16px; }
+		.layout { display: grid; grid-template-columns: minmax(0, 1.56fr) minmax(240px, .74fr); align-items: start; gap: 15px; }
+		.surface { min-width: 0; border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, transparent); }
+		.board-panel { padding: 19px; }
+		.section-top { justify-content: space-between; gap: 12px; padding-bottom: 16px; }
+		.section-heading { gap: 9px; min-width: 0; font-size: 15px; font-weight: 700; }
+		.section-heading-mark { color: var(--acid); font: 14px var(--mono); }
+		.status { display: inline-flex; align-items: center; gap: 7px; color: var(--quiet); font: 13px var(--mono); text-transform: uppercase; }
+		.status::before { width: 7px; height: 7px; border-radius: 50%; background: var(--red); content: ""; }
+		.status.is-live::before { background: var(--acid); box-shadow: 0 0 9px #d4f26990; }
+		.status.is-won::before { background: var(--cyan); box-shadow: 0 0 9px #7edbd290; }
+		.board-shell { padding: 15px 9px 11px; border: 1px solid #ffffff0b; background: #121510; animation: board-enter 340ms ease-out both; }
+		.board { display: grid; grid-template-columns: 26px repeat(6, minmax(0, 1fr)) 26px; grid-template-rows: repeat(6, minmax(0, 1fr)); gap: clamp(3px, .8vw, 7px); width: 100%; max-width: 504px; margin: 0 auto; }
+		.tile { position: relative; display: grid; min-width: 0; aspect-ratio: 1; place-items: center; overflow: visible; padding: 0; border: 1px solid #363b31; border-radius: 2px; background: #1b2019; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, transform 160ms ease; -webkit-tap-highlight-color: transparent; }
+		.tile:hover:not(:disabled) { z-index: 2; border-color: #879569; background: #252b20; transform: scale(1.045); }
+		.tile:focus-visible, .control:focus-visible { z-index: 3; outline: 2px solid var(--cyan); outline-offset: 3px; }
+		.tile.is-lit { z-index: 1; border-color: #a8c354; background: #2a3520; }
+		.tile.is-lit svg { filter: drop-shadow(0 0 4px #d4f26990); }
+		.tile.is-lit svg path { stroke: var(--acid); }
+		.tile.is-lit svg circle { fill: var(--acid); }
+		.tile svg { width: 78%; height: 78%; pointer-events: none; overflow: visible; }
+		.tile svg path { fill: none; stroke: #69715b; stroke-width: 3.2; stroke-linecap: square; stroke-linejoin: bevel; transition: stroke 150ms ease; }
+		.tile svg circle { fill: #69715b; transition: fill 150ms ease; }
+		.tile.is-path svg path { stroke: #919a7b; }
+		.tile.is-source svg path, .tile.is-goal svg path { stroke: var(--cyan); }
+		.tile.is-source::after, .tile.is-goal::after { position: absolute; inset: 3px; border: 1px solid #7edbd269; content: ""; pointer-events: none; }
+		.io-label { align-self: center; color: var(--quiet); font-size: 11px; text-align: center; }
+		.io-label.is-active { color: var(--cyan); }
+		.board-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 17px; padding-top: 12px; color: var(--quiet); font: 12px var(--mono); }
+		.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+		.legend-mark { width: 7px; height: 7px; background: #69715b; }
+		.legend-mark.signal { background: var(--acid); box-shadow: 0 0 6px #d4f26990; }
+		.legend-mark.endpoints { background: var(--cyan); }
+		.board-hint { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 15px; color: var(--quiet); font-size: 13px; }
+		.board-hint kbd { padding: 3px 5px; border: 1px solid var(--line); border-radius: 2px; color: var(--text); font: 11px var(--mono); }
+		.side-column { display: grid; gap: 15px; }
+		.telemetry { padding: 18px; }
+		.telemetry .section-top { padding-bottom: 13px; }
+		.signal-reading { padding: 14px 0; border-top: 1px solid var(--line); }
+		.reading-head { display: flex; justify-content: space-between; gap: 10px; color: var(--quiet); font: 13px var(--mono); }
+		.reading-number { padding-top: 6px; font: 30px var(--mono); }
+		.reading-unit { color: var(--quiet); font-size: 13px; }
+		.progress-track { height: 3px; margin-top: 10px; overflow: hidden; background: #30352c; }
+		.progress-fill { width: 0; height: 100%; background: var(--acid); transition: width 200ms ease; }
+		.integrity-fill { background: var(--cyan); }
+		.contract { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line); }
+		.contract-label { color: var(--quiet); font: 12px var(--mono); text-transform: uppercase; }
+		.contract-value { margin-top: 6px; font: 15px var(--mono); }
+		.actions { flex-direction: column; align-items: stretch; gap: 8px; padding: 15px; }
+		.control { display: flex; width: 100%; min-height: 46px; align-items: center; justify-content: space-between; gap: 10px; padding: 0 11px; border: 1px solid var(--line-bright); border-radius: 2px; background: var(--panel-raised); color: var(--text); font-size: 14px; cursor: pointer; transition: border-color 120ms ease, background-color 120ms ease; }
+		.control:hover:not(:disabled) { border-color: var(--acid); background: #272e20; }
+		.control:disabled { cursor: default; opacity: .42; }
+		.control-primary { border-color: var(--acid); background: var(--acid); color: #181b12; font-weight: 800; }
+		.control-primary:hover:not(:disabled) { border-color: #e3ff90; background: #e3ff90; }
+		.control-key { color: var(--quiet); font: 12px var(--mono); }
+		.control-primary .control-key { color: #49552f; }
+		.notice { min-height: 45px; padding: 12px 14px; border-top: 1px solid var(--line); color: var(--quiet); font-size: 14px; line-height: 1.5; }
+		.notice.success { color: var(--acid); }
+		.notice.info { color: var(--cyan); }
+		.footer { justify-content: space-between; gap: 16px; padding-top: 21px; color: var(--quiet); font: 12px var(--mono); }
+		@keyframes board-enter { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+		@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+		@media (max-width: 700px) {
+			.app { padding: 18px 17px 20px; }
+			.topbar { padding-bottom: 20px; }
+			.top-meta { gap: 15px; }
+			.intro { padding: 21px 0 19px; }
+			.layout { grid-template-columns: minmax(0, 1fr); }
+			.side-column { grid-template-columns: 1fr 1fr; align-items: start; }
+			.actions { min-height: 100%; }
+		}
+
+		@media (max-width: 430px) {
+			.app { padding-inline: 12px; }
+			.topbar { align-items: flex-start; }
+			.brand { gap: 8px; }
+			.brand-mark { width: 33px; }
+			.brand-caption { font-size: 12px; }
+			.top-meta { gap: 9px; }
+			.metric-label { gap: 5px; font-size: 11px; }
+			.metric-value { font-size: 14px; }
+			.intro { grid-template-columns: 1fr; gap: 12px; padding-top: 18px; }
+			.stage-badge { justify-self: start; }
+			h1 { font-size: 46px; }
+			.board-panel { padding: 12px; }
+			.board { grid-template-columns: 20px repeat(6, minmax(0, 1fr)) 20px; gap: 3px; }
+			.board-shell { padding: 10px 5px 8px; }
+			.io-label { font-size: 10px; }
+			.board-hint { align-items: flex-start; flex-direction: column; }
+			.board-legend { gap: 11px; font-size: 11px; }
+			.side-column { grid-template-columns: 1fr; }
+			.telemetry { padding: 14px; }
+			.telemetry .signal-reading { display: inline-block; width: calc(50% - 4px); vertical-align: top; }
+			.telemetry .signal-reading:nth-of-type(3) { padding-left: 8px; border-left: 1px solid var(--line); }
+			.footer { align-items: flex-start; flex-direction: column; gap: 6px; }
+		}
+	</style>
+</head>
+<body>
+	<main class="app">
+		<header class="topbar">
+			<div class="brand">
+				<div class="brand-mark" aria-hidden="true">//</div>
+				<div>
+					<p class="brand-name">PATCH//SHIFT</p>
+					<div class="brand-caption">FIELD ENGINEER TERMINAL</div>
+				</div>
+			</div>
+			<div class="top-meta">
+				<div>
+					<div class="metric-label"><span class="online-dot" aria-hidden="true"></span> SYSTEM</div>
+					<div class="metric-value" id="system-status">STANDBY</div>
+				</div>
+				<div>
+					<div class="metric-label">BEST SCORE</div>
+					<div class="metric-value" id="best-score">000000</div>
+				</div>
+			</div>
+		</header>
+
+		<section class="intro" aria-labelledby="game-title">
+			<div>
+				<div class="eyebrow">INCOMING TRANSMISSION / NETWORK 07</div>
+				<h1 id="game-title">PATCH<span class="slash">//</span>SHIFT</h1>
+				<p class="intro-copy">A signal got scrambled. Rotate the broken relays, bring the network back online, and keep the data moving.</p>
+			</div>
+			<div class="stage-badge"><span class="stage-symbol" aria-hidden="true">+</span><span id="stage-label">LEVEL 01</span></div>
+		</section>
+
+		<div class="layout">
+			<section class="surface board-panel" aria-labelledby="network-heading">
+				<div class="section-top">
+					<div class="section-heading" id="network-heading"><span class="section-heading-mark" aria-hidden="true">[+]</span> SIGNAL ROUTER</div>
+					<div class="status is-live" id="board-status" aria-live="polite">SIGNAL LOST</div>
+				</div>
+				<div class="board-shell">
+					<div class="board" id="board" role="group" aria-label="Six-by-six circuit board. Select a relay tile to rotate its connections clockwise."></div>
+					<div class="board-legend" aria-label="Circuit legend">
+						<span class="legend-item"><span class="legend-mark signal"></span> LIVE SIGNAL</span>
+						<span class="legend-item"><span class="legend-mark"></span> RELAY</span>
+						<span class="legend-item"><span class="legend-mark endpoints"></span> TERMINAL</span>
+					</div>
+				</div>
+				<div class="board-hint"><span>Click any relay to rotate it clockwise.</span><span>Try: <kbd>R</kbd> to restart</span></div>
+			</section>
+
+			<aside class="side-column" aria-label="Mission telemetry and controls">
+				<section class="surface telemetry" aria-labelledby="telemetry-heading">
+					<div class="section-top">
+						<div class="section-heading" id="telemetry-heading"><span class="section-heading-mark" aria-hidden="true">[_]</span> TELEMETRY</div>
+						<span class="eyebrow" id="streak-label">STREAK 00</span>
+					</div>
+					<div class="signal-reading">
+						<div class="reading-head"><span>RESPONSE WINDOW</span><span>05:00</span></div>
+						<div class="reading-number"><span id="timer">05:00</span><span class="reading-unit"> MIN:SEC</span></div>
+						<div class="progress-track" role="progressbar" aria-label="Time remaining" aria-valuemin="0" aria-valuemax="300" aria-valuenow="300"><div class="progress-fill" id="time-fill"></div></div>
+					</div>
+					<div class="signal-reading">
+						<div class="reading-head"><span>ROUTE INTEGRITY</span><span id="integrity-percent">00%</span></div>
+						<div class="reading-number"><span id="connected-count">00</span><span class="reading-unit"> / 36 RELAYS</span></div>
+						<div class="progress-track" role="progressbar" aria-label="Connected relays" aria-valuemin="0" aria-valuemax="36" aria-valuenow="0"><div class="progress-fill integrity-fill" id="integrity-fill"></div></div>
+					</div>
+					<div class="contract">
+						<div><div class="contract-label">PATCHES</div><div class="contract-value" id="move-count">000</div></div>
+						<div><div class="contract-label">CREDITS</div><div class="contract-value" id="score">000000</div></div>
+					</div>
+				</section>
+
+				<section class="surface actions" aria-label="Game controls">
+					<button class="control control-primary" id="start-button" type="button"><span>INITIALIZE LINK</span><span class="control-key">ENTER</span></button>
+					<button class="control" id="hint-button" type="button" disabled><span>Auto-patch a relay</span><span class="control-key" id="hint-cost">-100 PTS</span></button>
+					<button class="control" id="restart-button" type="button" disabled><span>Restart contract</span><span class="control-key">R</span></button>
+				</section>
+				<div class="notice" id="notice" aria-live="polite">Initialize the link to begin your first network recovery.</div>
+			</aside>
+		</div>
+
+		<footer class="footer"><span>NETWORK RECOVERY DIVISION / EST. 2084</span><span>NO SIGNAL IS PERMANENT.</span></footer>
+	</main>
+
+	<script>
+		"use strict";
+		const SIZE = 6;
+		const ROUND_SECONDS = 300;
+		const DIRECTIONS = ["N", "E", "S", "W"];
+		const STEPS = { N: [-1, 0], E: [0, 1], S: [1, 0], W: [0, -1] };
+		const OPPOSITE = { N: "S", E: "W", S: "N", W: "E" };
+		const SVG_PORTS = { N: "M20 20V2", E: "M20 20H38", S: "M20 20V38", W: "M20 20H2" };
+		const $ = id => document.getElementById(id);
+
+		let grid = [];
+		let boardButtons = [];
+		let startCell = 0;
+		let goalCell = 0;
+		let litCells = new Set();
+		let remaining = ROUND_SECONDS;
+		let moves = 0;
+		let score = 0;
+		let best = loadBest();
+		let stage = 1;
+		let streak = 0;
+		let running = false;
+		let finished = false;
+		let startedAt = 0;
+		let initialRotations = [];
+		let timerHandle = 0;
+
+		function loadBest() {
+			try { return Number(localStorage.getItem("patchshift-best")) || 0; }
+			catch { return 0; }
+		}
+
+		function saveBest() {
+			try { localStorage.setItem("patchshift-best", String(best)); }
+			catch { return; }
+		}
+
+		function randomInt(max) { return Math.floor(Math.random() * max); }
+		function indexOf(row, col) { return row * SIZE + col; }
+
+		function directionBetween(row, col, otherRow, otherCol) {
+			if (otherRow < row) return "N";
+			if (otherRow > row) return "S";
+			if (otherCol < col) return "W";
+			return "E";
+		}
+
+		function rotatedPorts(ports, rotation) {
+			return ports.map(port => DIRECTIONS[(DIRECTIONS.indexOf(port) + rotation) % 4]);
+		}
+
+		function createRoute() {
+			const route = [];
+			let row = randomInt(SIZE);
+			route.push([row, 0]);
+			for (let col = 1; col < SIZE; col += 1) {
+				route.push([row, col]);
+				if (col === SIZE - 1) continue;
+				const drift = randomInt(3) - 1;
+				row = Math.max(0, Math.min(SIZE - 1, row + drift));
+				if (row !== route[route.length - 1][0]) route.push([row, col]);
+			}
+			return route;
+		}
+
+		function createPuzzle() {
+			const route = createRoute();
+			const pathPorts = new Map();
+			startCell = indexOf(route[0][0], route[0][1]);
+			goalCell = indexOf(route.at(-1)[0], route.at(-1)[1]);
+
+			route.forEach(([row, col], position) => {
+				const previous = position === 0 ? [row, col - 1] : route[position - 1];
+				const next = position === route.length - 1 ? [row, col + 1] : route[position + 1];
+				pathPorts.set(indexOf(row, col), [directionBetween(row, col, previous[0], previous[1]), directionBetween(row, col, next[0], next[1])]);
+			});
+
+			grid = Array.from({ length: SIZE * SIZE }, (_, index) => {
+				const path = pathPorts.has(index);
+				const ports = path ? pathPorts.get(index) : createJunkPorts();
+				return {
+					ports,
+					rotation: path ? 1 + randomInt(3) : randomInt(4),
+					solutionRotation: 0,
+					isPath: path,
+					isStart: index === startCell,
+					isGoal: index === goalCell
+				};
+			});
+			initialRotations = grid.map(cell => cell.rotation);
+			renderBoard();
+			evaluateSignal();
+		}
+
+		function createJunkPorts() {
+			const shuffled = [...DIRECTIONS].sort(() => Math.random() - 0.5);
+			return shuffled.slice(0, 1 + randomInt(3));
+		}
+
+		function renderBoard() {
+			const board = $("board");
+			board.replaceChildren();
+			boardButtons = new Array(SIZE * SIZE);
+			const startRow = Math.floor(startCell / SIZE);
+			const goalRow = Math.floor(goalCell / SIZE);
+
+			for (let row = 0; row < SIZE; row += 1) {
+				board.append(makeIoLabel(row === startRow ? "IN" : "", 1, row + 1, row === startRow));
+				for (let col = 0; col < SIZE; col += 1) {
+					const index = indexOf(row, col);
+					const tile = grid[index];
+					const button = document.createElement("button");
+					button.className = "tile";
+					button.type = "button";
+					button.style.gridColumn = String(col + 2);
+					button.style.gridRow = String(row + 1);
+					button.setAttribute("aria-label", tileLabel(tile, index));
+					button.setAttribute("aria-pressed", "false");
+					button.disabled = !running || finished;
+					button.innerHTML = makeTileSvg(tile);
+					button.addEventListener("click", () => rotateTile(index));
+					board.append(button);
+					boardButtons[index] = button;
+				}
+				board.append(makeIoLabel(row === goalRow ? "OUT" : "", 8, row + 1, row === goalRow));
+			}
+			updateTileStyles();
+		}
+
+		function makeIoLabel(label, column, row, active) {
+			const element = document.createElement("div");
+			element.className = "io-label" + (active ? " is-active" : "");
+			element.style.gridColumn = String(column);
+			element.style.gridRow = String(row);
+			element.textContent = label;
+			element.setAttribute("aria-hidden", "true");
+			return element;
+		}
+
+		function makeTileSvg(tile) {
+			const lines = rotatedPorts(tile.ports, tile.rotation).map(port => `<path d="${SVG_PORTS[port]}"></path>`).join("");
+			return `<svg viewBox="0 0 40 40" aria-hidden="true" focusable="false">${lines}<circle cx="20" cy="20" r="3.1"></circle></svg>`;
+		}
+
+		function tileLabel(tile, index) {
+			const row = Math.floor(index / SIZE) + 1;
+			const col = index % SIZE + 1;
+			return `Relay, row ${row}, column ${col}; ports ${rotatedPorts(tile.ports, tile.rotation).join(", ")}. Activate to rotate clockwise.`;
+		}
+
+		function updateTileStyles() {
+			grid.forEach((tile, index) => {
+				const button = boardButtons[index];
+				if (!button) return;
+				button.className = "tile";
+				if (tile.isPath) button.classList.add("is-path");
+				if (tile.isStart) button.classList.add("is-source");
+				if (tile.isGoal) button.classList.add("is-goal");
+				if (litCells.has(index)) button.classList.add("is-lit");
+				button.setAttribute("aria-label", tileLabel(tile, index));
+				button.disabled = !running || finished;
+				button.innerHTML = makeTileSvg(tile);
+			});
+		}
+
+		function traceSignal() {
+			const visited = new Set();
+			const queue = [startCell];
+			if (!rotatedPorts(grid[startCell].ports, grid[startCell].rotation).includes("W")) return visited;
+			visited.add(startCell);
+			for (let pointer = 0; pointer < queue.length; pointer += 1) {
+				const current = queue[pointer];
+				const row = Math.floor(current / SIZE);
+				const col = current % SIZE;
+				for (const direction of rotatedPorts(grid[current].ports, grid[current].rotation)) {
+					const [rowStep, colStep] = STEPS[direction];
+					const nextRow = row + rowStep;
+					const nextCol = col + colStep;
+					if (nextRow < 0 || nextRow >= SIZE || nextCol < 0 || nextCol >= SIZE) continue;
+					const nextIndex = indexOf(nextRow, nextCol);
+					if (visited.has(nextIndex)) continue;
+					const nextPorts = rotatedPorts(grid[nextIndex].ports, grid[nextIndex].rotation);
+					if (!nextPorts.includes(OPPOSITE[direction])) continue;
+					visited.add(nextIndex);
+					queue.push(nextIndex);
+				}
+			}
+			return visited;
+		}
+
+		function evaluateSignal() {
+			litCells = traceSignal();
+			const reached = litCells.has(goalCell) && rotatedPorts(grid[goalCell].ports, grid[goalCell].rotation).includes("E");
+			const percent = Math.round(litCells.size / (SIZE * SIZE) * 100);
+			$("connected-count").textContent = String(litCells.size).padStart(2, "0");
+			$("integrity-percent").textContent = String(percent).padStart(2, "0") + "%";
+			$("integrity-fill").style.width = percent + "%";
+			$("integrity-fill").parentElement.setAttribute("aria-valuenow", String(litCells.size));
+			updateTileStyles();
+			updateHintAvailability();
+			if (reached && running && !finished) completeContract();
+		}
+
+		function rotateTile(index) {
+			if (!running || finished) return;
+			grid[index].rotation = (grid[index].rotation + 1) % 4;
+			moves += 1;
+			$("move-count").textContent = String(moves).padStart(3, "0");
+			evaluateSignal();
+		}
+
+		function startContract(newPuzzle = true) {
+			window.clearInterval(timerHandle);
+			running = true;
+			finished = false;
+			remaining = ROUND_SECONDS;
+			moves = 0;
+			startedAt = Date.now();
+			$("system-status").textContent = "RECOVERING";
+			$("board-status").textContent = "SIGNAL LOST";
+			$("board-status").className = "status is-live";
+			$("timer").textContent = "05:00";
+			$("time-fill").style.width = "0%";
+			$("time-fill").parentElement.setAttribute("aria-valuenow", String(remaining));
+			$("move-count").textContent = "000";
+			updateProgressionLabels();
+			$("notice").className = "notice info";
+			$("notice").textContent = "Signal trace active. Rotate relays until the output terminal lights up.";
+			$("start-button").disabled = true;
+			$("restart-button").disabled = false;
+			if (newPuzzle) createPuzzle();
+			else {
+				litCells = new Set();
+				renderBoard();
+				evaluateSignal();
+			}
+			timerHandle = window.setInterval(tick, 100);
+			if (litCells.has(goalCell) && rotatedPorts(grid[goalCell].ports, grid[goalCell].rotation).includes("E")) completeContract();
+		}
+
+		function tick() {
+			if (!running || finished) return;
+			remaining = Math.max(0, ROUND_SECONDS - (Date.now() - startedAt) / 1000);
+			const totalSeconds = Math.ceil(remaining);
+			const minutes = Math.floor(totalSeconds / 60);
+			const seconds = totalSeconds % 60;
+			$("timer").textContent = String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+			$("time-fill").style.width = ((ROUND_SECONDS - remaining) / ROUND_SECONDS * 100) + "%";
+			$("time-fill").parentElement.setAttribute("aria-valuenow", String(Math.ceil(remaining)));
+			if (remaining <= 0) endRun();
+		}
+
+		function completeContract() {
+			finished = true;
+			window.clearInterval(timerHandle);
+			changeScore(Math.max(50, 850 - Math.floor((ROUND_SECONDS - remaining) * 1.4) - moves * 11 + streak * 40));
+			streak += 1;
+			stage += 1;
+			$("board-status").textContent = "LINK RESTORED";
+			$("board-status").className = "status is-won";
+			$("system-status").textContent = "ONLINE";
+			updateProgressionLabels();
+			$("streak-label").textContent = "STREAK " + String(streak).padStart(2, "0");
+			$("notice").className = "notice success";
+			$("notice").textContent = `Network restored in ${moves} patches. Your next contract is ready.`;
+			$("start-button").disabled = false;
+			$("start-button").innerHTML = '<span>NEW CONTRACT</span><span class="control-key">ENTER</span>';
+			$("hint-button").disabled = true;
+			$("restart-button").disabled = true;
+			updateTileStyles();
+		}
+
+		function endRun() {
+			finished = true;
+			running = false;
+			streak = 0;
+			$("streak-label").textContent = "STREAK 00";
+			$("board-status").textContent = "WINDOW CLOSED";
+			$("board-status").className = "status";
+			$("system-status").textContent = "OFFLINE";
+			$("notice").className = "notice";
+			$("notice").textContent = "Response window closed. Restart this contract to trace a new signal.";
+			$("start-button").disabled = true;
+			$("hint-button").disabled = true;
+			$("restart-button").disabled = false;
+			updateTileStyles();
+		}
+
+		function restartContract() {
+			if (!grid.length) return;
+			grid.forEach((tile, index) => { tile.rotation = initialRotations[index]; });
+			startContract(false);
+		}
+
+		function applyHint() {
+			if (!running || finished) return;
+			const hintCost = stage * 100;
+			if (score <= hintCost) {
+				updateHintAvailability();
+				return;
+			}
+			const repairableIndex = grid.findIndex(tile => tile.isPath && tile.rotation !== tile.solutionRotation);
+			if (repairableIndex < 0) return;
+			grid[repairableIndex].rotation = grid[repairableIndex].solutionRotation;
+			changeScore(-hintCost);
+			moves += 1;
+			$("move-count").textContent = String(moves).padStart(3, "0");
+			$("notice").className = "notice info";
+			$("notice").textContent = `One relay auto-patched. -${hintCost} credits. Signal trace recalculating...`;
+			evaluateSignal();
+		}
+
+		function updateProgressionLabels() {
+			$("stage-label").textContent = "LEVEL " + String(stage).padStart(2, "0");
+			$("hint-cost").textContent = "-" + (stage * 100) + " PTS";
+			updateHintAvailability();
+		}
+
+		function updateHintAvailability() {
+			const hasRepairableRelay = grid.some(tile => tile.isPath && tile.rotation !== tile.solutionRotation);
+			$("hint-button").disabled = !running || finished || score <= stage * 100 || !hasRepairableRelay;
+		}
+
+		function changeScore(amount) {
+			score = Math.max(0, score + amount);
+			updateScore();
+		}
+
+		function updateScore() {
+			$("score").textContent = String(score).padStart(6, "0");
+			updateHintAvailability();
+			if (score > best) {
+				best = score;
+				$("best-score").textContent = String(best).padStart(6, "0");
+				saveBest();
+			}
+		}
+
+		$("start-button").addEventListener("click", () => {
+			if (finished || !running) startContract();
+		});
+		$("restart-button").addEventListener("click", restartContract);
+		$("hint-button").addEventListener("click", applyHint);
+		document.addEventListener("keydown", event => {
+			if (event.altKey || event.ctrlKey || event.metaKey) return;
+			if (event.key.toLowerCase() === "r" && grid.length) {
+				event.preventDefault();
+				restartContract();
+			}
+			if (event.key === "Enter" && !running && !$("start-button").disabled) {
+				event.preventDefault();
+				startContract();
+			}
+		});
+
+		$("best-score").textContent = String(best).padStart(6, "0");
+		updateProgressionLabels();
+		createPuzzle();
+	</script>
+</body>
+</html>
