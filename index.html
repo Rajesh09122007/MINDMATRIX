@@ -1,0 +1,308 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ByteQuest | Fresh Match</title>
+<style>
+:root{--bg:#0b1020;--card:#151f35;--line:#30425f;--cyan:#61e8ee;--muted:#a9bad2}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top,#203b63,var(--bg) 65%);color:white;font:16px system-ui,sans-serif;min-height:100vh}
+main{max-width:760px;margin:auto;padding:24px 16px}
+header,.row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+header{margin-bottom:22px}
+h1{font-size:29px;margin:0;letter-spacing:-1px}
+h2{font-size:25px;margin:8px 0}
+.cyan{color:var(--cyan)}.muted{color:var(--muted);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:20px;margin-bottom:15px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:17px}
+.stat{background:#0d172a;padding:11px;border-radius:10px}
+.stat strong{display:block;font-size:21px}
+.bar{height:6px;background:#2a3951;border-radius:8px;overflow:hidden;margin-top:12px}
+#fill{height:100%;width:0;background:var(--cyan);transition:width .2s}
+#question{font-size:20px;font-weight:750;margin:17px 0}
+.answer{display:block;width:100%;text-align:left;padding:13px;margin-top:9px;background:#192943;color:white;border:1px solid #394e6b;border-radius:10px;cursor:pointer}
+.answer:hover,.answer.selected{border-color:var(--cyan);background:#17404a}
+button:focus-visible{outline:2px solid white;outline-offset:3px}
+button:disabled{opacity:.5;cursor:default}
+.primary{width:100%;border:0;border-radius:10px;background:var(--cyan);color:#071522;padding:14px;font-weight:800;cursor:pointer;margin-top:15px}
+.secondary{background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:9px;padding:10px;cursor:pointer}
+#feedback{font-size:14px;line-height:1.6;margin-top:15px}
+.good{color:#78efb4}.bad{color:#ffb79a}
+.hidden{display:none}
+@media(max-width:450px){main{padding:16px 11px}.card{padding:15px}h1{font-size:24px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+ <div>
+  <div class="cyan" style="font-size:11px;letter-spacing:2px">THINK · SOLVE · LEVEL UP</div>
+  <h1>BYTEQUEST</h1>
+  <div class="muted">A new challenge every match.</div>
+ </div>
+ <div style="text-align:right">
+  <div class="muted">TOTAL XP</div>
+  <strong class="cyan" id="xp">0</strong>
+ </div>
+</header>
+
+<section class="card">
+ <div class="row">
+  <strong id="match">Match 1</strong>
+  <span class="muted" id="count">Ready to play</span>
+ </div>
+ <div class="bar"><div id="fill"></div></div>
+ <div class="stats">
+  <div class="stat"><span class="muted">MATCH SCORE</span><strong id="score">0</strong></div>
+  <div class="stat"><span class="muted">CORRECT</span><strong id="correct">0/5</strong></div>
+  <div class="stat"><span class="muted">SOURCE</span><strong id="source" style="font-size:14px">Ready</strong></div>
+ </div>
+</section>
+
+<section class="card" id="game">
+ <div class="cyan muted" id="category">YOUR NEXT QUEST</div>
+ <h2 id="title">Ready for a fresh challenge?</h2>
+ <p class="muted" id="description">Each match loads a new question set from the internet when available.</p>
+ <div id="question">Press Start Match to begin.</div>
+ <div id="answers"></div>
+ <div id="feedback" aria-live="polite"></div>
+ <button class="primary" id="action">Start Match</button>
+ <button class="secondary" id="hint" style="width:100%;margin-top:10px" disabled>Hint</button>
+</section>
+
+<p class="muted">ByteQuest is for everyone. Play, learn, and build your problem-solving skills.</p>
+</main>
+
+<script>
+"use strict";
+
+const API="https://opentdb.com/api.php?amount=20&type=multiple&encode=url3986";
+const $=id=>document.getElementById(id);
+
+let xp=0,matchNo=1,questions=[],index=0,score=0,correct=0;
+let selected=-1,locked=false,hintUsed=false;
+let seen=new Set(),busy=false;
+
+const fallback=[
+ {c:"Logic",q:"What number comes next: 2, 4, 8, 16, ?",a:["18","24","32","20"],right:2,h:"Each number doubles.",why:"16 × 2 = 32."},
+ {c:"Student Life",q:"You have 60 minutes. Tasks take 25, 20 and 10 minutes. How much time remains?",a:["5 minutes","10 minutes","15 minutes","0 minutes"],right:0,h:"Add all three durations.",why:"25 + 20 + 10 = 55 minutes. Five minutes remain."},
+ {c:"Digital Safety",q:"Which is the safest password habit?",a:["Use your birthday","Reuse one password","Use a long unique passphrase","Share it with friends"],right:2,h:"Avoid personal details and reuse.",why:"A long, unique passphrase is harder to guess."},
+ {c:"Logic",q:"Which one is different: triangle, square, circle, cube?",a:["Triangle","Square","Circle","Cube"],right:3,h:"Think about 2D versus 3D.",why:"A cube is three-dimensional."},
+ {c:"Budget",q:"Two notebooks cost ₹35 each. You pay ₹100. What is your change?",a:["₹20","₹25","₹30","₹35"],right:2,h:"Two notebooks cost ₹70.",why:"₹100 − ₹70 = ₹30."},
+ {c:"Science",q:"To test whether sunlight affects plant growth, what should you do?",a:["Change every condition","Change sunlight and keep other conditions similar","Use different plant species","Measure only once"],right:1,h:"Control other variables.",why:"A fair experiment changes one main variable while keeping others similar."},
+ {c:"Technology",q:"A computer has no internet. What is a sensible first step?",a:["Buy a new computer","Check Wi-Fi settings","Delete all files","Replace the screen"],right:1,h:"Start with the simplest checks.",why:"Check connectivity settings before attempting expensive fixes."},
+ {c:"Patterns",q:"What comes next: 1, 4, 9, 16, ?",a:["20","24","25","36"],right:2,h:"These are square numbers.",why:"The next square is 5 × 5 = 25."}
+];
+
+function shuffle(arr){
+ for(let i=arr.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [arr[i],arr[j]]=[arr[j],arr[i]];
+ }
+ return arr;
+}
+
+function decode(text){
+ return decodeURIComponent(text);
+}
+
+function localQuestions(){
+ const pool=shuffle([...fallback]);
+ return pool.slice(0,5).map(q=>({
+  ...q,a:q.a.map((v,i)=>({v,correct:i===q.right})).sort(()=>Math.random()-.5).map(x=>x.v),
+  right:0
+ })).map(q=>{
+  // Restore the correct answer index after shuffling.
+  const original=fallback.find(f=>f.q===q.q);
+  q.right=q.a.indexOf(original.a[original.right]);
+  return q;
+ });
+}
+
+async function fetchQuestions(){
+ const response=await fetch(API,{cache:"no-store"});
+ if(!response.ok)throw new Error("Network error");
+ const data=await response.json();
+ if(data.response_code!==0||!data.results?.length)
+  throw new Error("Question service unavailable");
+
+ return data.results.map(item=>{
+  const correctAnswer=decode(item.correct_answer);
+  const answers=shuffle([
+   correctAnswer,...item.incorrect_answers.map(decode)
+  ]);
+  return {
+   c:decode(item.category),
+   q:decode(item.question),
+   a:answers,
+   right:answers.indexOf(correctAnswer),
+   h:"Read the question carefully and eliminate unlikely answers.",
+   why:"Correct answer: "+correctAnswer+"."
+  };
+ });
+}
+
+async function startMatch(){
+ if(busy)return;
+ busy=true;
+ $("action").disabled=true;
+ $("action").textContent="Loading fresh questions…";
+ $("feedback").textContent="Connecting to the online question service…";
+
+ try{
+  let fresh=await fetchQuestions();
+  fresh=shuffle(fresh.filter(q=>!seen.has(q.q)));
+  if(fresh.length<5){
+   fresh=shuffle(await fetchQuestions());
+  }
+  questions=fresh.slice(0,5);
+  questions.forEach(q=>seen.add(q.q));
+  $("source").textContent="Online";
+ }catch(error){
+  questions=localQuestions();
+  $("source").textContent="Offline";
+  $("feedback").textContent="Online questions unavailable. Playing with built-in questions instead.";
+ }
+
+ index=0;score=0;correct=0;
+ renderQuestion();
+ busy=false;
+ $("action").disabled=false;
+}
+
+function renderQuestion(){
+ selected=-1;locked=false;hintUsed=false;
+ const q=questions[index];
+ $("match").textContent="Match "+matchNo;
+ $("count").textContent=`Question ${index+1} of ${questions.length}`;
+ $("fill").style.width=(index/questions.length*100)+"%";
+ $("category").textContent=q.c;
+ $("title").textContent="Mission "+(index+1);
+ $("description").textContent="Choose the best answer. Think before you lock it in.";
+ $("question").textContent=q.q;
+ $("feedback").textContent="";
+ $("answers").replaceChildren();
+
+ q.a.forEach((answer,i)=>{
+  const button=document.createElement("button");
+  button.className="answer";
+  button.textContent=String.fromCharCode(65+i)+". "+answer;
+  button.onclick=()=>{
+   if(locked)return;
+   selected=i;
+   [...$("answers").children].forEach((b,j)=>b.classList.toggle("selected",i===j));
+   $("action").textContent="Lock Answer";
+   $("action").disabled=false;
+  };
+  $("answers").append(button);
+ });
+
+ $("hint").disabled=false;
+ $("hint").textContent="💡 Hint · costs 2 XP";
+ $("action").disabled=true;
+ $("action").textContent="Choose an answer";
+ updateStats();
+}
+
+function updateStats(){
+ $("xp").textContent=xp;
+ $("score").textContent=score;
+ $("correct").textContent=correct+"/"+questions.length;
+ $("count").textContent=index<questions.length?
+ `Question ${index+1} of ${questions.length}`:"Match complete";
+ $("fill").style.width=(index/questions.length*100)+"%";
+}
+
+$("hint").onclick=()=>{
+ if(locked||hintUsed)return;
+ hintUsed=true;
+ xp=Math.max(0,xp-2);
+ score=Math.max(0,score-2);
+ $("feedback").textContent="Hint: "+questions[index].h;
+ $("hint").disabled=true;
+ updateStats();
+};
+
+$("action").onclick=async()=>{
+ if(!questions.length||index>=questions.length){
+  await startMatch();
+  return;
+ }
+ if(!locked){
+  if(selected<0)return;
+  locked=true;
+  const q=questions[index];
+  const ok=selected===q.right;
+  if(ok){
+   const points=hintUsed?8:10;
+   score+=points;xp+=points;correct++;
+   $("feedback").innerHTML='<span class="good">Correct! +'+points+' XP</span>';
+  }else{
+   $("feedback").innerHTML='<span class="bad">Not quite.</span>';
+  }
+  const explanation=document.createElement("p");
+  explanation.textContent=q.why;
+  $("feedback").append(explanation);
+  [...$("answers").children].forEach((b,i)=>{
+   b.disabled=true;
+   if(i===q.right)b.style.borderColor="var(--cyan)";
+  });
+  $("hint").disabled=true;
+  $("action").textContent=index===questions.length-1?"View Results":"Next Question";
+  updateStats();
+  return;
+ }
+ index++;
+ if(index<questions.length){
+  renderQuestion();
+ }else{
+  showResults();
+ }
+};
+
+function showResults(){
+ $("fill").style.width="100%";
+ $("count").textContent="Match complete";
+ $("category").textContent="MATCH REPORT";
+ $("title").textContent="Quest complete!";
+ $("description").textContent=`You answered ${correct} of ${questions.length} correctly.`;
+ $("question").textContent=`${score} XP earned this match`;
+ $("answers").replaceChildren();
+ $("feedback").textContent="Keep practising your reasoning, knowledge and decision-making.";
+ $("hint").disabled=true;
+ $("action").disabled=false;
+ $("action").textContent="Play a Fresh Match ↻";
+ $("action").onclick=()=>{
+  matchNo++;
+  questions=[];
+  index=0;
+  $("action").onclick=null;
+  startMatch();
+ };
+ updateStats();
+}
+
+$("action").onclick=async()=>{
+ if(!questions.length){await startMatch();return}
+ if(index>=questions.length){matchNo++;questions=[];await startMatch();return}
+ if(!locked){
+  if(selected<0)return;
+  locked=true;
+  const q=questions[index],ok=selected===q.right;
+  if(ok){const pts=hintUsed?8:10;score+=pts;xp+=pts;correct++}
+  $("feedback").textContent=(ok?"Correct! ":"Not quite. ")+q.why;
+  [...$("answers").children].forEach((b,i)=>{
+   b.disabled=true;if(i===q.right)b.style.borderColor="var(--cyan)";
+  });
+  $("hint").disabled=true;
+  $("action").textContent=index===questions.length-1?"View Results":"Next Question";
+  updateStats();return;
+ }
+ index++;
+ if(index<questions.length)renderQuestion();else showResults();
+};
+</script>
+</body>
+</html>
